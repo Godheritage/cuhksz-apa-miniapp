@@ -1,0 +1,1 @@
+.donation-qr { display: block; width: 100%; max-width: 640rpx; margin-left: auto; margin-right: auto; border-radius: 16rpx; }

@@ -16,6 +16,13 @@
       <view class="muted mt8">不熟悉操作时，点这里看简短说明。</view>
     </view>
 
+    <view class="card donate-shortcut" bindtap="goDonatePay">
+      <view class="row">
+        <view><view class="card-title">自愿支持猫咪</view><view class="tiny">微信捐款 · 查看收款码</view></view>
+        <view class="pill">查看</view>
+      </view>
+    </view>
+
     <view class="card">
       <view class="row" bindtap="toggleMore">
         <view class="card-title">更多功能</view>
@@ -24,7 +31,7 @@
       <block wx:if="{{showMore}}">
         <view class="btn ghost mt12" bindtap="goSites">点位与排班</view>
         <view class="btn ghost" bindtap="goCats">校园猫档</view>
-        <view class="btn ghost" bindtap="goDonate">捐助窗口</view>
+        <view class="btn ghost" bindtap="goDonate">物资捐助登记</view>
         <view class="btn ghost" bindtap="goSzcat">绝育资料</view>
         <view class="btn ghost" bindtap="goUpdates">最近更新</view>
         <view class="btn" wx:if="{{user.role === 'admin'}}" bindtap="goAdmin">管理 · 仅管理员可见</view>

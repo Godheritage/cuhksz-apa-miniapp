@@ -1,0 +1,18 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">自愿支持</view>
+    <view class="hero-title">微信捐款</view>
+    <view class="hero-sub">感谢照顾校园里的猫。这个入口只展示收款码，不会自动扣款。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">微信收款码</view>
+    <view class="muted mt8" wx:if="{{recipient}}">付款前请核对收款方：{{recipient}}</view>
+    <block wx:if="{{configured && !loadError}}">
+      <image class="donation-qr mt16" src="{{qrPath}}" mode="widthFix" bindtap="previewQr" bindlongpress="previewQr" binderror="onImageError" />
+      <view class="btn ghost mt16" bindtap="previewQr">点开大图</view>
+      <view class="tiny mt12">点开后可按微信提供的方式识别或保存图片。付款金额自定；到账情况请以收款方确认为准。</view>
+    </block>
+    <view class="empty mt16" wx:else>收款码暂时无法显示，请联系管理员确认。</view>
+  </view>
+</view>

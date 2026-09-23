@@ -10,6 +10,7 @@
     "pages/cat/list/list",
     "pages/cat/detail/detail",
     "pages/donate/donate",
+    "pages/donate/pay/pay",
     "pages/szcat/szcat",
     "pages/updates/updates",
     "pages/roster/roster",

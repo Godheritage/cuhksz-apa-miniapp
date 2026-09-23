@@ -21,7 +21,7 @@
 
   <view class="card" wx:if="{{canApply}}">
     <view class="card-title">通过之后</view>
-    <view class="muted mt12">管理员通过后，底部会出现任务、点位和我的。打开「我的」里的使用指南，会按你的身份说明怎么用。</view>
+    <view class="muted mt12">管理员通过后，底部会出现每日执勤、任务、机动投喂和我的。打开「我的」里的使用指南，会按你的身份说明怎么用。</view>
   </view>
 
   <view class="card" wx:if="{{user.role === 'pending' || user.role === 'rejected'}}">
@@ -29,5 +29,12 @@
     <view class="muted mt12">名字：{{user.displayName || '未填写'}}</view>
     <view class="muted mt8" wx:if="{{user.applyNote}}">备注：{{user.applyNote}}</view>
     <view class="tiny mt12">每个微信号只能申请一次，不能再改、也不能再提交。</view>
+  </view>
+
+  <view class="card" bindtap="goDonatePay">
+    <view class="row">
+      <view><view class="card-title">自愿支持猫咪</view><view class="tiny">不必加入协会，也可查看微信捐款码。</view></view>
+      <view class="pill">查看</view>
+    </view>
   </view>
 </view>

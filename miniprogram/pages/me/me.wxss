@@ -1,1 +1,2 @@
 /* 使用全局样式 */
+.donate-shortcut { border: 2rpx solid #d6e5d8; }
