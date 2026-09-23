@@ -84,6 +84,13 @@
       <view>{{item.title}}</view>
       <view class="tiny">{{item.detailText}}</view>
     </view>
+    <view class="card-title mt16">到岗打卡 {{calendarCheckins.length}} 条</view>
+    <view class="tiny">到岗记录单列，不计入上面的完成任务数。</view>
+    <view class="tiny mt8" wx:if="{{calendarCheckinLoading}}">正在加载到岗记录…</view>
+    <view class="list-item" wx:for="{{calendarCheckins}}" wx:key="_id">
+      <view>{{item.siteName || '未指定点位'}} · {{item.displayName}}</view>
+      <view class="tiny">{{item.timeText}} · {{item.sourceText}}</view>
+    </view>
   </view>
 </view>
 <view class="page" wx:else>
