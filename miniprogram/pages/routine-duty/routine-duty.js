@@ -30,8 +30,11 @@ function calendarDays(monthKey, selectedDate, logs) {
   return cells
 }
 
-function dayCards(sites, shifts, logs, dateKey) {
-  return (sites || []).map((site) => ({
+function dayCards(sites, archivedSites, shifts, logs, dateKey) {
+  const current = (sites || []).map((site) => ({ ...site, archived: false }))
+  const history = (archivedSites || []).filter((site) => (logs || [])
+    .some((row) => row.dateKey === dateKey && row.siteId === site._id))
+  return current.concat(history).map((site) => ({
     ...site,
     shifts: (shifts || []).map((shift) => {
       const rows = (logs || []).filter((row) => row.dateKey === dateKey
@@ -50,8 +53,8 @@ Page({
   behaviors: [auth],
   data: {
     ready: false, monthKey: todayKey().slice(0, 7), selectedDate: todayKey(),
-    week: WEEK, days: [], sites: [], shifts: [], logs: [], cards: [],
-    doneSlots: 0, totalSlots: 12,
+    week: WEEK, days: [], sites: [], archivedSites: [], shifts: [], logs: [], cards: [],
+    doneSlots: 0, totalSlots: 0, siteNames: '',
     selectedSlot: {}, form: emptyForm(), saving: false,
     pendingMembers: 0,
   },
@@ -89,11 +92,13 @@ Page({
     return api.call('listRoutineDuty', { monthKey }).then((data) => {
       if (this.data.monthKey !== monthKey) return
       const sites = data.sites || []
+      const archivedSites = data.archivedSites || []
       const shifts = data.shifts || []
       const logs = (data.logs || []).map((row) => ({ ...row, timeText: formatTime(row.at) }))
-      const cards = dayCards(sites, shifts, logs, this.data.selectedDate)
+      const cards = dayCards(sites, archivedSites, shifts, logs, this.data.selectedDate)
       this.setData({
-        ready: true, sites, shifts, logs, cards,
+        ready: true, sites, archivedSites, shifts, logs, cards,
+        siteNames: sites.map((site) => site.name).join('、'),
         totalSlots: sites.length * shifts.length,
         doneSlots: cards.reduce((sum, site) => sum + site.shifts.filter((shift) => shift.done).length, 0),
         days: calendarDays(monthKey, this.data.selectedDate, logs),
@@ -111,7 +116,7 @@ Page({
   pickDay(e) {
     const selectedDate = e.currentTarget.dataset.date
     if (!selectedDate) return
-    const cards = dayCards(this.data.sites, this.data.shifts, this.data.logs, selectedDate)
+    const cards = dayCards(this.data.sites, this.data.archivedSites, this.data.shifts, this.data.logs, selectedDate)
     this.setData({
       selectedDate, cards, selectedSlot: {}, form: emptyForm(),
       doneSlots: cards.reduce((sum, site) => sum + site.shifts.filter((shift) => shift.done).length, 0),
@@ -123,6 +128,7 @@ Page({
     const site = this.data.cards.find((item) => item._id === siteId)
     const shift = site && site.shifts.find((item) => item.id === shiftId)
     if (!shift) return
+    if (site.archived) return
     if (shift.mine) {
       wx.showToast({ title: '你已打过这一班', icon: 'none' })
       return
@@ -185,5 +191,7 @@ Page({
         .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
     } })
   },
+  openSiteDetail(e) { wx.navigateTo({ url: `/pages/site/detail/detail?id=${e.currentTarget.dataset.id}` }) },
   goReviewMembers() { wx.navigateTo({ url: '/pages/admin/members/members' }) },
+  goAdminSites() { wx.navigateTo({ url: '/pages/admin/sites/sites' }) },
 })

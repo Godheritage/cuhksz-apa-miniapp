@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-kicker">点位</view>
     <view class="hero-title">执勤点维护</view>
-    <view class="hero-sub">保密地点的详细地址默认不对成员展示。不要写真实门锁密码。</view>
+    <view class="hero-sub">在下方逐个点位开启或关闭「每日执勤」。保密地址不对成员直接展示；不要写真实门锁密码。</view>
   </view>
 
   <view class="card">
@@ -44,6 +44,10 @@
       </view>
     </view>
     <view class="tiny mt8">{{item.publicDesc}}</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{item.routineDutyEnabled ? 'on' : ''}}" data-id="{{item._id}}" bindtap="toggleRoutineDuty">每日执勤：{{item.routineDutyEnabled ? '已开启' : '未开启'}}</view>
+      <view class="tiny">开启后出现在每日执勤日历，每天早、午、晚、凌晨四班；关闭后旧打卡仍保留。</view>
+    </view>
     <view class="field-label mt16">笼子</view>
     <view class="list-item" wx:for="{{item.cages}}" wx:for-item="cage" wx:key="_id">
       <view class="row">

@@ -91,6 +91,7 @@ function siteForMember(site, { sensitive = true } = {}) {
     sort: site.sort || 0,
     enabled: site.enabled !== false,
     confidential: !!site.confidential,
+    routineDutyEnabled: routineDutyEnabled(site),
   }
   if (sensitive) {
     row.address = site.address || ''
@@ -479,6 +480,11 @@ async function listFeedLogs(catId, user) {
     at: log.at || 0,
     canDelete: isAdmin(user) || log.byOpenid === user.openid,
   }))
+}
+
+function routineDutyEnabled(site) {
+  if (typeof site.routineDutyEnabled === 'boolean') return site.routineDutyEnabled
+  return ['base', 'xiangbo', 'ta'].includes(site.seedKey)
 }
 
 function summarizeSiteFeed(rows, dateKey) {
@@ -1169,6 +1175,20 @@ const handlers = {
     return ok({ siteId })
   },
 
+  async adminSetRoutineDutySite(event, user) {
+    if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可设置每日执勤点位')
+    const siteId = String(event.siteId || '')
+    const site = await getById('sites', siteId)
+    if (!site) return fail('NOT_FOUND', '点位不存在')
+    const enabled = event.enabled === true
+    await db.collection('sites').doc(siteId).update({ data: { routineDutyEnabled: enabled, updatedAt: new Date() } })
+    await writeLog(user, {
+      action: 'set_routine_duty_site', targetType: 'site', targetId: siteId, siteId,
+      before: { routineDutyEnabled: routineDutyEnabled(site) }, after: { routineDutyEnabled: enabled },
+    })
+    return ok({ siteId, routineDutyEnabled: enabled })
+  },
+
   async adminRenameSite(event, user) {
     if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可维护点位')
     const siteId = String(event.siteId || '')
@@ -1179,7 +1199,7 @@ const handlers = {
     if (site.name === name) return ok({ siteId, name, updated: 0 })
     await db.collection('sites').doc(siteId).update({ data: { name, updatedAt: new Date() } })
     let updated = 0
-    for (const collection of ['work_tasks', 'duty_records', 'site_feed_logs', 'access_requests', 'cat_tasks', 'care_plans']) {
+    for (const collection of ['work_tasks', 'duty_records', 'site_feed_logs', 'routine_duty_checkins', 'access_requests', 'cat_tasks', 'care_plans']) {
       const rows = await getAll(collection, { siteId })
       for (const row of rows) {
         if (row.siteName !== site.name) continue
@@ -1389,6 +1409,7 @@ require('./ops')(handlers, {
   saveMedia,
   loadMediaMap,
   attachTempUrls,
+  routineDutyEnabled,
   ok,
   fail,
   isApproved,

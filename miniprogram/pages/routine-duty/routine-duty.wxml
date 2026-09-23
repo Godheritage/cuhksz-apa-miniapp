@@ -1,9 +1,14 @@
 <view class="page has-tab" wx:if="{{ready}}">
   <view class="hero">
     <view class="hero-kicker">每日执勤</view>
-    <view class="hero-title">三处固定投喂点</view>
-    <view class="hero-sub">示例寄养点、祥波、TA 每天早、午、晚、凌晨四班。选日期和班次打卡，照片可直接拍或选。</view>
+    <view class="hero-title">日常执勤点位</view>
+    <view class="hero-sub">{{siteNames || '尚未设置点位'}}，每天早、午、晚、凌晨四班。选日期和班次打卡，照片可直接拍或选。</view>
   </view>
+
+  <view class="card" wx:if="{{user.role === 'admin'}}" bindtap="goAdminSites">
+    <view class="row"><view class="card-title">设置哪些点需要每日执勤 · 仅管理员可见</view><view class="pill">管理点位</view></view>
+  </view>
+  <view class="card" wx:if="{{!sites.length}}"><view class="empty">还没有开启每日执勤的点位，请管理员在点位管理中设置。</view></view>
 
   <view class="card review-alert" wx:if="{{user.role === 'admin' && pendingMembers > 0}}" bindtap="goReviewMembers">
     <view class="row">
@@ -22,19 +27,23 @@
       <view class="calendar-head" wx:for="{{week}}" wx:key="*this">{{item}}</view>
       <view class="calendar-day {{item.selected ? 'selected' : ''}}" wx:for="{{days}}" wx:key="key" data-date="{{item.blank ? '' : item.key}}" bindtap="pickDay">
         <view wx:if="{{!item.blank}}">{{item.day}}</view>
-        <view class="calendar-count" wx:if="{{item.count}}">{{item.count}}/{{totalSlots}}</view>
+        <view class="calendar-count" wx:if="{{item.count}}">{{item.count}} 班</view>
       </view>
     </view>
-    <view class="tiny mt12">每天 12 个班位；同班多人打卡仍算 1 班。旧表排班不会自动算已打卡。</view>
+    <view class="tiny mt12">每天 {{totalSlots}} 个班位；同班多人打卡仍算 1 班。旧表排班不会自动算已打卡。</view>
   </view>
 
   <view class="card">
-    <view class="card-title">{{selectedDate}} · 已打卡 {{doneSlots}}/{{totalSlots}} 班</view>
-    <view class="tiny mt8">每班可多人参与。具体时段按协会排班；迟到也可补记，实际提交时间会保留。</view>
+    <view class="card-title">{{selectedDate}} · 已打卡 {{doneSlots}} 班</view>
+    <view class="tiny mt8">当前启用 {{sites.length}} 个点位，每日应有 {{totalSlots}} 班；停用点位的旧打卡仍可查看。迟到可补记，实际提交时间会保留。</view>
   </view>
 
   <view class="card" wx:for="{{cards}}" wx:for-item="site" wx:key="_id">
-    <view class="card-title">{{site.name}}</view>
+    <view class="row">
+      <view class="card-title">{{site.name}}</view>
+      <view class="pill warn" wx:if="{{site.archived}}">历史点位</view>
+      <view class="btn mini plain" wx:else data-id="{{site._id}}" bindtap="openSiteDetail">点位档案</view>
+    </view>
     <view class="list-item" wx:for="{{site.shifts}}" wx:for-item="shift" wx:key="id">
       <view class="row">
         <view>
@@ -43,7 +52,7 @@
         </view>
         <view class="row">
           <view class="pill {{shift.done ? 'on' : 'idle'}}">{{shift.done ? '已打卡' : '待打卡'}}</view>
-          <view class="btn mini ghost" wx:if="{{!shift.mine}}" data-site-id="{{site._id}}" data-shift-id="{{shift.id}}" bindtap="pickSlot">我来打卡</view>
+          <view class="btn mini ghost" wx:if="{{!site.archived && !shift.mine}}" data-site-id="{{site._id}}" data-shift-id="{{shift.id}}" bindtap="pickSlot">我来打卡</view>
         </view>
       </view>
       <view class="checkin-row" wx:for="{{shift.logs}}" wx:for-item="log" wx:key="_id">

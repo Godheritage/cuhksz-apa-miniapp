@@ -8,6 +8,7 @@ const SITE_SEED = [
   {
     key: 'base',
     name: '示例寄养点',
+    routineDutyEnabled: true,
     type: '基地',
     confidential: true,
     publicDesc: '寄养与护理主点位，笼子占用以现场为准。',
@@ -33,6 +34,7 @@ const SITE_SEED = [
   {
     key: 'ta',
     name: 'TA',
+    routineDutyEnabled: true,
     type: '投喂点',
     publicDesc: '投喂点。幼猫少加粮，优先小包装幼猫粮。',
     address: '详细位置由管理员填写。',
@@ -48,6 +50,7 @@ const SITE_SEED = [
   {
     key: 'sitin',
     name: '示例自动喂食点',
+    routineDutyEnabled: false,
     type: '自动喂食点',
     publicDesc: '自动喂食机补粮与巡查。',
     address: '详细位置由管理员填写。',
@@ -63,6 +66,7 @@ const SITE_SEED = [
   {
     key: 'yifu',
     name: '示例投喂点 B',
+    routineDutyEnabled: false,
     type: '投喂点',
     publicDesc: '投喂点。',
     address: '详细位置由管理员填写。',
@@ -75,6 +79,7 @@ const SITE_SEED = [
   {
     key: 'xiangbo',
     name: '祥波',
+    routineDutyEnabled: true,
     type: '投喂点',
     publicDesc: '投喂点，可记录本次是否已喂。',
     address: '详细位置由管理员填写。',

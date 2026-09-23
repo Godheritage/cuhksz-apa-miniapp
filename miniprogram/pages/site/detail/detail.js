@@ -40,7 +40,7 @@ Page({
         this.setData({
           ready: true,
           site: data.site,
-          isRoutineSite: ['示例寄养点', '祥波', 'TA'].includes(data.site.name),
+          isRoutineSite: !!data.site.routineDutyEnabled,
           cages: data.cages || [],
           assets: (data.assets || []).map((a) => ({
             ...a,

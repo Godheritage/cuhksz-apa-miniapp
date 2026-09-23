@@ -85,6 +85,17 @@ Page({
       .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
   },
 
+  toggleRoutineDuty(e) {
+    const site = this.data.sites.find((row) => row._id === e.currentTarget.dataset.id)
+    if (!site) return
+    api.call('adminSetRoutineDutySite', {
+      siteId: site._id, enabled: !site.routineDutyEnabled,
+    }).then(() => {
+      wx.showToast({ title: site.routineDutyEnabled ? '已关闭每日执勤' : '已开启每日执勤', icon: 'success' })
+      this.reload()
+    }).catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
+  },
+
   deleteSite(e) {
     const site = this.data.sites.find((s) => s._id === e.currentTarget.dataset.id)
     if (!site) return

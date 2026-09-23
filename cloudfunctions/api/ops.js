@@ -13,16 +13,12 @@ const SZCAT_CLAIM = { open: '待抢', claimed: '已认领', submitted: '已提�
 
 function attachCloudOps(handlers, ctx) {
   const {
-    db, _, getAll, getById, writeLog, addDoc, quietUpdate, quietLog, photoIds, saveMedia, loadMediaMap, attachTempUrls,
+    db, _, getAll, getById, writeLog, addDoc, quietUpdate, quietLog, photoIds, saveMedia, loadMediaMap, attachTempUrls, routineDutyEnabled,
     ok, fail, isApproved, isAdmin, shanghaiDateKey, ensureOnDuty,
   } = ctx
   const MOVE_BOARD = { _id: 'move_board', name: '搬运' }
   const GENERAL_BOARD = { _id: 'general', name: '不限地点' }
-  const ROUTINE_SITE_SPECS = [
-    { key: 'base', name: '示例寄养点' },
-    { key: 'xiangbo', name: '祥波' },
-    { key: 'ta', name: 'TA' },
-  ]
+  const ROUTINE_SITE_ORDER = ['base', 'xiangbo', 'ta']
   const ROUTINE_SHIFTS = [
     { id: 'morning', name: '早班' },
     { id: 'noon', name: '午班' },
@@ -31,10 +27,14 @@ function attachCloudOps(handlers, ctx) {
   ]
 
   function routineSites(sites) {
-    return ROUTINE_SITE_SPECS.map((spec) => {
-      const site = sites.find((item) => item.seedKey === spec.key || item.name === spec.name)
-      return site && site.enabled !== false ? { _id: site._id, name: site.name } : null
-    }).filter(Boolean)
+    const order = (site) => {
+      const key = site.seedKey || ({ 示例寄养点: 'base', 祥波: 'xiangbo', TA: 'ta' })[site.name]
+      const index = ROUTINE_SITE_ORDER.indexOf(key)
+      return index >= 0 ? index : 100 + (Number(site.sort) || 99)
+    }
+    return sites.filter((site) => site.enabled !== false && routineDutyEnabled(site))
+      .sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name, 'zh-CN'))
+      .map((site) => ({ _id: site._id, name: site.name }))
   }
 
   function addDays(dateKey, n) {
@@ -1205,8 +1205,11 @@ function attachCloudOps(handlers, ctx) {
     ])
     const activeSites = routineSites(sites)
     const allowed = new Set(activeSites.map((site) => site._id))
-    const logs = rows.filter((row) => allowed.has(row.siteId))
-      .sort((a, b) => (b.at || 0) - (a.at || 0))
+    const logs = rows.sort((a, b) => (b.at || 0) - (a.at || 0))
+    const siteById = Object.fromEntries(sites.map((site) => [site._id, site]))
+    const archivedSites = [...new Set(logs.map((row) => row.siteId).filter((id) => !allowed.has(id)))]
+      .map((id) => ({ _id: id, name: siteById[id]?.name
+        || logs.find((row) => row.siteId === id)?.siteName || '历史点位', archived: true }))
     const ids = [...new Set(logs.flatMap((row) => row.photoFileIds || []))]
     const urlById = {}
     for (let i = 0; i < ids.length; i += 50) {
@@ -1214,7 +1217,7 @@ function attachCloudOps(handlers, ctx) {
       urls.forEach((item) => { if (item.tempFileURL) urlById[item.fileID] = item.tempFileURL })
     }
     return ok({
-      sites: activeSites, shifts: ROUTINE_SHIFTS,
+      sites: activeSites, archivedSites, shifts: ROUTINE_SHIFTS,
       logs: logs.map((row) => ({
         _id: row._id, dateKey: row.dateKey, siteId: row.siteId,
         shiftId: row.shiftId, fed: !!row.fed, watered: !!row.watered,
@@ -1237,7 +1240,7 @@ function attachCloudOps(handlers, ctx) {
     if (!ROUTINE_SHIFTS.some((shift) => shift.id === shiftId)) return fail('INVALID', '班次不合法')
     const sites = routineSites(await getAll('sites'))
     const site = sites.find((item) => item._id === event.siteId)
-    if (!site) return fail('INVALID', '请选择示例寄养点、祥波或 TA')
+    if (!site) return fail('INVALID', '请选择已开启每日执勤的点位')
     const prior = (await calendarRows('routine_duty_checkins', {
       dateKey, siteId: site._id, shiftId, byOpenid: user.openid,
     }))[0]
