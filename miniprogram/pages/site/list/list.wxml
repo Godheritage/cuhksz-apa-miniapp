@@ -9,7 +9,7 @@
     <view class="row">
       <view>
         <view class="card-title">排班表</view>
-        <view class="tiny mt8">每周的豪宅执勤和投喂。由管理员从表格导入。</view>
+        <view class="tiny mt8">每周的示例寄养点执勤和投喂。由管理员从表格导入。</view>
       </view>
       <view class="pill">打开</view>
     </view>

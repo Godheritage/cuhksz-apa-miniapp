@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-kicker">排班</view>
     <view class="hero-title">{{label}}</view>
-    <view class="hero-sub">从腾讯文档导出的表格导入。示例排班仅用于演示。门禁密码不会写进小程序。</view>
+    <view class="hero-sub">从腾讯文档导出的表格导入。示例排班仅用于演示；门禁密码不会写进小程序。</view>
   </view>
 
   <view class="card" wx:if="{{isAdmin}}">
@@ -11,7 +11,7 @@
     <view hover-class="btn-hover" class="btn" bindtap="importRoster">{{imported ? '重新导入 9.22 表格' : '导入 9.22 表格'}}</view>
   </view>
 
-  <view class="empty" wx:if="{{!imported}}">管理员导入后，这里显示每周的豪宅执勤和投喂。义卖这类一次性活动不单独做一页，需要时发成普通任务。</view>
+  <view class="empty" wx:if="{{!imported}}">管理员导入后，这里显示每周的示例寄养点执勤和投喂。义卖这类一次性活动不单独做一页，需要时发成普通任务。</view>
 
   <block wx:if="{{imported}}">
     <view class="chip-wrap">

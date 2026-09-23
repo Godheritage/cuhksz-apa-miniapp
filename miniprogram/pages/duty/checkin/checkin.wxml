@@ -29,7 +29,7 @@
       <textarea placeholder-class="ph" class="textarea" placeholder="例如：晚班到岗，钥匙已交接到下一位" value="{{form.remark}}" bindinput="onRemark" maxlength="300" />
     </view>
     <view class="field">
-      <view class="field-label">现场照片（如豪宅白板，可选，最多 3 张）</view>
+      <view class="field-label">现场照片（如示例寄养点白板，可选，最多 3 张）</view>
       <view class="photo-row mt12">
         <image class="photo" wx:for="{{photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="removePhoto" />
         <view class="photo add" wx:if="{{photos.length < 3}}" bindtap="choosePhoto">+</view>

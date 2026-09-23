@@ -42,15 +42,11 @@
     "list": [
       {
         "pagePath": "pages/duty/list/list",
-        "text": "任务",
-        "iconPath": "assets/tab/duty.png",
-        "selectedIconPath": "assets/tab/duty-active.png"
+        "text": "任务"
       },
       {
         "pagePath": "pages/me/me",
-        "text": "我的",
-        "iconPath": "assets/tab/me.png",
-        "selectedIconPath": "assets/tab/me-active.png"
+        "text": "我的"
       }
     ]
   },

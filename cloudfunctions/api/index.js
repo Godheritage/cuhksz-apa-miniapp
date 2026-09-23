@@ -1166,6 +1166,31 @@ const handlers = {
     return ok({ siteId })
   },
 
+  async adminRenameSite(event, user) {
+    if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可维护点位')
+    const siteId = String(event.siteId || '')
+    const name = String(event.name || '').trim().slice(0, 20)
+    if (!name) return fail('INVALID', '请填写新名称')
+    const site = await getById('sites', siteId)
+    if (!site) return fail('NOT_FOUND', '点位不存在')
+    if (site.name === name) return ok({ siteId, name, updated: 0 })
+    await db.collection('sites').doc(siteId).update({ data: { name, updatedAt: new Date() } })
+    let updated = 0
+    for (const collection of ['work_tasks', 'duty_records', 'site_feed_logs', 'access_requests', 'cat_tasks', 'care_plans']) {
+      const rows = await getAll(collection, { siteId })
+      for (const row of rows) {
+        if (row.siteName !== site.name) continue
+        await db.collection(collection).doc(row._id).update({ data: { siteName: name } })
+        updated += 1
+      }
+    }
+    await writeLog(user, {
+      action: 'rename_site', targetType: 'site', targetId: siteId, siteId,
+      before: { name: site.name }, after: { name },
+    })
+    return ok({ siteId, name, updated })
+  },
+
   async adminDeleteSite(event, user) {
     if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可维护点位')
     const siteId = String(event.siteId || '')

@@ -72,7 +72,7 @@
     <view class="muted mt8">你已领取。做完后写明结果，交给管理员审核。</view>
     <input placeholder-class="ph" class="input mt16" placeholder="做任务的人的名字" value="{{report.workerName}}" bindinput="onReport" data-key="workerName" />
     <textarea placeholder-class="ph" class="textarea" placeholder="任务描述" value="{{report.description}}" bindinput="onReport" data-key="description" />
-    <view hover-class="btn-hover" class="btn ghost" bindtap="choosePhoto">拍照或上传图片（如豪宅白板）</view>
+    <view hover-class="btn-hover" class="btn ghost" bindtap="choosePhoto">拍照或上传图片（如示例寄养点白板）</view>
     <view class="chip-wrap mt8" wx:if="{{report.photos.length}}">
       <image
         class="photo"
