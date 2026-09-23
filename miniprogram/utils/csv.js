@@ -249,10 +249,11 @@ function buildOrgExport(input, dateKey) {
         { key: 'watered', label: '添水' },
         { key: 'note', label: '备注' },
         { key: 'byName', label: '记录人' },
+        { key: 'photos', label: '图片文件ID' },
       ], (input.mobileFeedLogs || []).map((row) => ({
         dateKey: row.dateKey, catName: row.catName,
         seen: !!row.seen, fed: !!row.fed, watered: !!row.watered,
-        note: row.note, byName: row.byName,
+        note: row.note, byName: row.byName, photos: row.photoFileIds || [],
       }))),
       rows: (input.mobileFeedLogs || []).length,
     },

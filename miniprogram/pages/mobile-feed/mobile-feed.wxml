@@ -2,11 +2,16 @@
   <view class="hero">
     <view class="hero-kicker">机动投喂</view>
     <view class="hero-title">出现日历</view>
-    <view class="hero-sub">偶尔出现的猫这类不天天出现的猫，在见到或巡查时记一笔；不自动生成每日任务。</view>
+    <view class="hero-sub">不固定出现的猫都能记；新猫直接填名字，不用先建档。不会自动生成每日任务。</view>
   </view>
 
   <view class="card">
-    <view class="row">
+    <view class="tiny">按猫查看</view>
+    <view class="chip-wrap mt8">
+      <view class="chip {{catFilter === '' ? 'on' : ''}}" data-name="" bindtap="pickCat">全部猫</view>
+      <view class="chip {{catFilter === item ? 'on' : ''}}" wx:for="{{catOptions}}" wx:key="*this" data-name="{{item}}" bindtap="pickCat">{{item}}</view>
+    </view>
+    <view class="row mt16">
       <view class="chip" bindtap="prevMonth">上月</view>
       <view class="card-title">{{monthKey}}</view>
       <view class="chip" bindtap="nextMonth">下月</view>
@@ -23,7 +28,7 @@
 
   <view class="card">
     <view class="card-title">{{selectedDate}} · 记一次</view>
-    <input class="input mt12" placeholder="猫名或临时称呼，例如：偶尔出现的猫" value="{{form.catName}}" bindinput="onName" />
+    <input class="input mt12" placeholder="猫名或临时称呼，新猫直接填" value="{{form.catName}}" bindinput="onName" />
     <view class="row mt12">
       <view>今天见到了</view>
       <switch checked="{{form.seen}}" bindchange="toggleSeen" color="#3f6f52" />
@@ -33,6 +38,13 @@
       <view class="chip {{form.watered ? 'on' : ''}}" data-key="watered" bindtap="toggleFlag">{{form.watered ? '已添水' : '添水'}}</view>
     </view>
     <input class="input mt12" placeholder="现场备注（可选）" value="{{form.note}}" bindinput="onNote" />
+    <view class="btn ghost mt12" bindtap="choosePhoto">拍照或选图（最多 3 张）</view>
+    <view class="photo-row mt8" wx:if="{{form.photos.length}}">
+      <view class="photo-cell" wx:for="{{form.photos}}" wx:key="*this">
+        <image class="photo" src="{{item}}" mode="aspectFill" data-url="{{item}}" data-urls="{{form.photos}}" bindtap="previewPhoto" />
+        <view class="tiny remove-photo" data-index="{{index}}" bindtap="removePhoto">移除</view>
+      </view>
+    </view>
     <view class="btn" bindtap="save">{{saving ? '保存中…' : '保存打卡'}}</view>
   </view>
 
@@ -48,6 +60,9 @@
           <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
         </view>
         <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteLog">删除</view>
+      </view>
+      <view class="photo-row mt8" wx:if="{{item.photoUrls.length}}">
+        <image class="photo" wx:for="{{item.photoUrls}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoUrls}}" bindtap="previewPhoto" />
       </view>
     </view>
   </view>

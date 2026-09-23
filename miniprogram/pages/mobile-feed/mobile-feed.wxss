@@ -7,3 +7,5 @@
 .calendar-day { border-radius: 12rpx; }
 .calendar-day.selected { background: #e4efe6; color: #3f6f52; }
 .calendar-mark { font-size: 18rpx; color: #3f6f52; line-height: 1; }
+.photo-cell { display: flex; flex-direction: column; align-items: center; }
+.remove-photo { color: #b4413b; padding: 4rpx 12rpx; }

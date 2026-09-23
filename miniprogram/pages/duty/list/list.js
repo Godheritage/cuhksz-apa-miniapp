@@ -1,6 +1,6 @@
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
-const { taskStatusText, taskStatusPill } = require('../../../utils/format')
+const { taskStatusText, taskStatusPill, todayKey } = require('../../../utils/format')
 const photos = require('../../../utils/photos')
 
 const HERO = {
@@ -8,6 +8,28 @@ const HERO = {
   once: '做完就结束；有截止日期的请留意时间。',
   daily: '每天都可做。',
   weekly: '只在指定星期执行。',
+}
+const WEEK = ['一', '二', '三', '四', '五', '六', '日']
+
+function monthShift(monthKey, amount) {
+  const [year, month] = monthKey.split('-').map(Number)
+  const next = new Date(year, month - 1 + amount, 1)
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
+}
+
+function calendarDays(monthKey, selectedDate, items) {
+  const [year, month] = monthKey.split('-').map(Number)
+  const offset = (new Date(year, month - 1, 1).getDay() + 6) % 7
+  const count = new Date(year, month, 0).getDate()
+  const counts = {}
+  ;(items || []).forEach((item) => { counts[item.dateKey] = (counts[item.dateKey] || 0) + 1 })
+  const cells = []
+  for (let i = 0; i < offset; i += 1) cells.push({ key: 'blank-' + i, blank: true })
+  for (let day = 1; day <= count; day += 1) {
+    const key = `${monthKey}-${String(day).padStart(2, '0')}`
+    cells.push({ key, day, selected: key === selectedDate, count: counts[key] || 0 })
+  }
+  return cells
 }
 
 Page({
@@ -23,6 +45,10 @@ Page({
     groups: [],
     loginSlow: false,
     showFilters: false,
+    calendarMonth: todayKey().slice(0, 7),
+    calendarSelectedDate: todayKey(),
+    calendarWeek: WEEK, calendarDays: [], calendarItems: [], calendarDayItems: [],
+    calendarLoading: true,
   },
 
   onShow() {
@@ -45,6 +71,7 @@ Page({
       } catch (e) {}
       this.setData({ siteId })
       this.reload()
+      this.reloadCalendar()
     })
   },
 
@@ -55,7 +82,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.reload().finally(() => wx.stopPullDownRefresh())
+    Promise.all([this.reload(), this.reloadCalendar()]).finally(() => wx.stopPullDownRefresh())
   },
 
   reload() {
@@ -101,6 +128,50 @@ Page({
       const tabBar = this.getTabBar && this.getTabBar()
       if (tabBar) tabBar.setData({ pendingCount: count })
     }).catch(() => {})
+  },
+
+  reloadCalendar() {
+    const monthKey = this.data.calendarMonth
+    this.setData({ calendarLoading: true })
+    return api.call('listTaskCalendar', { monthKey })
+      .then((data) => {
+        if (this.data.calendarMonth !== monthKey) return
+        const items = (data.items || []).map((item) => ({
+          ...item,
+          detailText: [
+            item.siteName,
+            (item.workerNames || []).join('、'),
+            item.approvedCount > 1 ? `${item.approvedCount} 条回传通过` : '',
+          ].filter(Boolean).join(' · '),
+        }))
+        this.setData({
+          calendarLoading: false,
+          calendarItems: items,
+          calendarDays: calendarDays(monthKey, this.data.calendarSelectedDate, items),
+          calendarDayItems: items.filter((item) => item.dateKey === this.data.calendarSelectedDate),
+        })
+      })
+      .catch((err) => {
+        this.setData({ calendarLoading: false })
+        wx.showToast({ title: photos.failText(err), icon: 'none' })
+      })
+  },
+
+  prevCalendarMonth() { this.changeCalendarMonth(-1) },
+  nextCalendarMonth() { this.changeCalendarMonth(1) },
+  changeCalendarMonth(amount) {
+    const calendarMonth = monthShift(this.data.calendarMonth, amount)
+    this.setData({ calendarMonth, calendarSelectedDate: calendarMonth + '-01' })
+    this.reloadCalendar()
+  },
+  pickCalendarDay(e) {
+    const calendarSelectedDate = e.currentTarget.dataset.date
+    if (!calendarSelectedDate) return
+    this.setData({
+      calendarSelectedDate,
+      calendarDays: calendarDays(this.data.calendarMonth, calendarSelectedDate, this.data.calendarItems),
+      calendarDayItems: this.data.calendarItems.filter((item) => item.dateKey === calendarSelectedDate),
+    })
   },
 
   pickSite(e) {

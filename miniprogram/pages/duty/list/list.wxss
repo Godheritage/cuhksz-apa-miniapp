@@ -1,2 +1,9 @@
 /* 使用全局样式 */
 .review-alert { border: 2rpx solid #e8b67f; background: #fff8ed; }
+.task-calendar { margin-top: 16rpx; }
+.task-calendar-grid { display: flex; flex-wrap: wrap; }
+.task-calendar-head, .task-calendar-day { width: 14.285%; box-sizing: border-box; text-align: center; min-height: 72rpx; padding: 8rpx 0; }
+.task-calendar-head { color: #7a7368; font-size: 24rpx; }
+.task-calendar-day { border-radius: 12rpx; }
+.task-calendar-day.selected { background: #e4efe6; color: #3f6f52; }
+.task-calendar-count { font-size: 18rpx; color: #3f6f52; line-height: 1.2; }

@@ -61,6 +61,30 @@
       </view>
     </view>
   </view>
+
+  <view class="card task-calendar">
+    <view class="card-title">组织任务日历</view>
+    <view class="tiny mt8">每天显示审核通过的任务数；多人完成同一任务，当天只算 1 项。</view>
+    <view class="row mt16">
+      <view class="chip" bindtap="prevCalendarMonth">上月</view>
+      <view class="card-title">{{calendarMonth}}</view>
+      <view class="chip" bindtap="nextCalendarMonth">下月</view>
+    </view>
+    <view class="task-calendar-grid mt12">
+      <view class="task-calendar-head" wx:for="{{calendarWeek}}" wx:key="*this">{{item}}</view>
+      <view class="task-calendar-day {{item.selected ? 'selected' : ''}}" wx:for="{{calendarDays}}" wx:key="key" data-date="{{item.blank ? '' : item.key}}" bindtap="pickCalendarDay">
+        <view wx:if="{{!item.blank}}">{{item.day}}</view>
+        <view class="task-calendar-count" wx:if="{{item.count}}">{{item.count}} 项</view>
+      </view>
+    </view>
+    <view class="tiny mt12" wx:if="{{calendarLoading}}">正在加载完成记录…</view>
+    <view class="card-title mt16">{{calendarSelectedDate}} · 已完成 {{calendarDayItems.length}} 项</view>
+    <view class="empty" wx:if="{{!calendarLoading && !calendarDayItems.length}}">这一天还没有审核通过的任务。</view>
+    <view class="list-item" wx:for="{{calendarDayItems}}" wx:key="taskId">
+      <view>{{item.title}}</view>
+      <view class="tiny">{{item.detailText}}</view>
+    </view>
+  </view>
 </view>
 <view class="page" wx:else>
   <view class="card">

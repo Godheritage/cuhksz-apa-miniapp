@@ -13,7 +13,7 @@ const SZCAT_CLAIM = { open: '待抢', claimed: '已认领', submitted: '已提�
 
 function attachCloudOps(handlers, ctx) {
   const {
-    db, _, getAll, getById, writeLog, addDoc, quietUpdate, quietLog, photoIds, saveMedia, loadMediaMap,
+    db, _, getAll, getById, writeLog, addDoc, quietUpdate, quietLog, photoIds, saveMedia, loadMediaMap, attachTempUrls,
     ok, fail, isApproved, isAdmin, shanghaiDateKey, ensureOnDuty,
   } = ctx
   const MOVE_BOARD = { _id: 'move_board', name: '搬运' }
@@ -1018,6 +1018,22 @@ function attachCloudOps(handlers, ctx) {
     return { reports, events }
   }
 
+  async function calendarRows(name, where = {}) {
+    const rows = []
+    for (let skip = 0; skip < 5000; skip += 100) {
+      let page
+      try {
+        page = await db.collection(name).where(where).orderBy('_id', 'asc').skip(skip).limit(100).get()
+      } catch (e) {
+        if (skip === 0) return []
+        throw e
+      }
+      rows.push(...page.data)
+      if (page.data.length < 100) return rows
+    }
+    throw new Error('任务记录过多，无法完整生成日历')
+  }
+
   handlers.listWorkTasks = async function listWorkTasks(event, user) {
     if (!isApproved(user)) return fail('FORBIDDEN', '需通过成员审核后才能查看任务')
     const sites = (await getAll('sites', { enabled: _.neq(false) }))
@@ -1130,6 +1146,36 @@ function attachCloudOps(handlers, ctx) {
     const added = await addDoc('work_tasks', data)
     quietLog(user, { action: 'publish_work_task', targetType: 'work_task', targetId: added._id, siteId: data.siteId })
     return ok({ taskId: added._id, task: decorateWorkTask(Object.assign({ _id: added._id }, data), user) })
+  }
+
+  handlers.listTaskCalendar = async function listTaskCalendar(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '需通过成员审核后才能查看任务日历')
+    const monthKey = String(event.monthKey || shanghaiDateKey().slice(0, 7))
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) return fail('INVALID', '月份不合法')
+    const [events, tasks] = await Promise.all([
+      calendarRows('work_task_events', { status: 'done' }),
+      calendarRows('work_tasks'),
+    ])
+    const taskById = Object.fromEntries(tasks.map((task) => [task._id, task]))
+    const completed = new Map()
+    events.forEach((item) => {
+      const task = taskById[item.taskId]
+      if (!task) return
+      const dateKey = item.dateKey || shanghaiDateKey(new Date(item.at))
+      if (!dateKey.startsWith(monthKey + '-')) return
+      const key = dateKey + ':' + item.taskId
+      const prior = completed.get(key) || {
+        taskId: item.taskId, dateKey,
+        title: item.title || task.title || '未命名任务',
+        siteName: item.siteName || task.siteName || '不限地点',
+        approvedCount: 0, workerNames: [], at: 0,
+      }
+      prior.approvedCount += 1
+      prior.at = Math.max(prior.at, Number(item.at) || 0)
+      if (item.workerName && !prior.workerNames.includes(item.workerName)) prior.workerNames.push(item.workerName)
+      completed.set(key, prior)
+    })
+    return ok({ items: [...completed.values()].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
   }
 
   async function taskInTransaction(taskId, change) {
@@ -1323,15 +1369,16 @@ function attachCloudOps(handlers, ctx) {
         const index = participants.findIndex((p) => p.key === event.participantKey && p.status === 'review')
         if (index < 0) return fail('INVALID', '这条回传已处理，请刷新')
         const participant = participants[index]
+        const report = participant.report || {}
         if (approved) participants[index] = { ...participant, status: 'done' }
         else participants.splice(index, 1)
         await ref.update({ data: { participants } })
         await tx.collection('work_task_events').add({ data: {
           taskId: task._id, participantKey: event.participantKey, status,
-          rejectNote, at: Date.now(),
+          rejectNote, at: Date.now(), dateKey: todayKey,
+          title: task.title || '', siteName: task.siteName || '', workerName: report.workerName || '',
         } })
         if (approved) {
-          const report = participant.report || {}
           await tx.collection('work_credit_events').add({ data: {
             openid: report.submittedBy || '', workerName: report.workerName || '',
             taskId: task._id + ':' + participant.key, title: task.title || '',
@@ -1343,15 +1390,18 @@ function attachCloudOps(handlers, ctx) {
       const todayKey = shanghaiDateKey()
       const live = task.workflowV2 ? task : applyTaskOverlay(task, overlays.reports, overlays.events, todayKey)
       if (live.status !== 'review') return fail('INVALID', '现在没有待审回传')
+      const report = live.report || {}
       const patch = {
         status, rejectNote, workflowV2: true, report: _.set(live.report || null),
         claimedBy: '', claimedByName: '', claimedDateKey: '',
       }
       if (approved) patch.lastDoneDateKey = todayKey
       await ref.update({ data: patch })
-      await tx.collection('work_task_events').add({ data: { taskId: task._id, status, rejectNote, at: Date.now() } })
+      await tx.collection('work_task_events').add({ data: {
+        taskId: task._id, status, rejectNote, at: Date.now(), dateKey: todayKey,
+        title: task.title || '', siteName: task.siteName || '', workerName: report.workerName || '',
+      } })
       if (approved) {
-        const report = live.report || {}
         await tx.collection('work_credit_events').add({ data: {
           openid: report.submittedBy || '', workerName: report.workerName || '',
           taskId: task._id, title: task.title || '', dateKey: todayKey, at: Date.now(),
@@ -1478,12 +1528,26 @@ function attachCloudOps(handlers, ctx) {
     if (!isApproved(user)) return fail('FORBIDDEN', '需通过成员审核后才能看机动投喂')
     const monthKey = String(event.monthKey || shanghaiDateKey().slice(0, 7))
     if (!/^\d{4}-\d{2}$/.test(monthKey)) return fail('INVALID', '月份不合法')
-    const rows = (await safeAll('mobile_feed_logs', { monthKey }))
+    const [monthRows, allRows] = await Promise.all([
+      calendarRows('mobile_feed_logs', { monthKey }),
+      calendarRows('mobile_feed_logs'),
+    ])
+    const rows = monthRows
       .sort((a, b) => (b.at || 0) - (a.at || 0))
-    return ok({ logs: rows.map((row) => ({
+    const catNames = [...new Set(allRows.map((row) => String(row.catName || '').trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'zh-CN'))
+    const ids = [...new Set(rows.flatMap((row) => row.photoFileIds || []))]
+    const photoUrlById = {}
+    for (let i = 0; i < ids.length; i += 50) {
+      const urls = await attachTempUrls(ids.slice(i, i + 50))
+      urls.forEach((item) => { if (item.tempFileURL) photoUrlById[item.fileID] = item.tempFileURL })
+    }
+    return ok({ catNames, logs: rows.map((row) => ({
       _id: row._id, dateKey: row.dateKey, catName: row.catName,
       seen: !!row.seen, fed: !!row.fed, watered: !!row.watered,
       note: row.note || '', byName: row.byName || '', at: row.at,
+      photoFileIds: row.photoFileIds || [],
+      photoUrls: (row.photoFileIds || []).map((id) => photoUrlById[id]).filter(Boolean),
       canDelete: isAdmin(user) || row.byOpenid === user.openid,
     })) })
   }
@@ -1500,6 +1564,7 @@ function attachCloudOps(handlers, ctx) {
       dateKey, monthKey: dateKey.slice(0, 7), catName,
       seen: !!event.seen, fed: !!event.fed, watered: !!event.watered,
       note: String(event.note || '').trim().slice(0, 160),
+      photoFileIds: photoIds(event).slice(0, 3),
       byName: String(user.displayName || '未署名成员').slice(0, 20),
       byOpenid: user.openid, at: Date.now(),
     }

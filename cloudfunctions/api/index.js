@@ -1385,6 +1385,7 @@ require('./ops')(handlers, {
   photoIds,
   saveMedia,
   loadMediaMap,
+  attachTempUrls,
   ok,
   fail,
   isApproved,

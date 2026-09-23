@@ -29,7 +29,8 @@ function removeAt(list, index) {
 function uploadMany(paths, folder) {
   return Promise.all((paths || []).map((path) => {
     if (!path) return Promise.resolve('')
-    if (/^cloud:\/\//.test(path) || /^https?:\/\//.test(path)) return Promise.resolve(path)
+    const localPreview = /^https?:\/\/(?:usr|tmp)(?:\/|:)/i.test(path)
+    if (/^cloud:\/\//.test(path) || (/^https?:\/\//.test(path) && !localPreview)) return Promise.resolve(path)
     return api.uploadDutyPhoto(path, folder)
   })).then((ids) => ids.filter(Boolean))
 }
