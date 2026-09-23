@@ -1,0 +1,24 @@
+.tab-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 999;
+  display: flex; box-sizing: border-box;
+  height: calc(108rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #fffdf8; border-top: 1rpx solid #e6dfd2;
+}
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #7a7368; }
+.tab.active { color: #3f6f52; }
+.label { font-size: 20rpx; line-height: 30rpx; }
+.icon { position: relative; width: 48rpx; height: 48rpx; margin-bottom: 2rpx; color: inherit; }
+.notice { box-sizing: border-box; border: 4rpx solid currentColor; border-radius: 4rpx; width: 35rpx; height: 37rpx; margin-top: 8rpx; margin-bottom: 5rpx; }
+.tack { position: absolute; top: -9rpx; width: 8rpx; height: 8rpx; border-radius: 50%; background: currentColor; }
+.tack.left { left: -5rpx; }.tack.right { right: -5rpx; }
+.notice-line { position: absolute; left: 6rpx; height: 3rpx; border-radius: 3rpx; background: currentColor; }
+.notice-line.first { top: 8rpx; width: 16rpx; }.notice-line.second { top: 17rpx; width: 16rpx; }.notice-line.third { top: 26rpx; width: 11rpx; }
+.cat .ear { position: absolute; top: 4rpx; width: 0; height: 0; border-left: 9rpx solid transparent; border-right: 9rpx solid transparent; border-bottom: 18rpx solid currentColor; }
+.cat .ear.left { left: 2rpx; transform: rotate(-18deg); }.cat .ear.right { right: 2rpx; transform: rotate(18deg); }
+.cat .face { position: absolute; left: 4rpx; top: 14rpx; width: 40rpx; height: 31rpx; background: currentColor; border-radius: 48%; }
+.cat .eye { position: absolute; top: 15rpx; width: 4rpx; height: 4rpx; background: #fffdf8; border-radius: 50%; }
+.cat .eye.left { left: 11rpx; }.cat .eye.right { right: 11rpx; }
+.cat .nose { position: absolute; top: 23rpx; left: 18rpx; width: 4rpx; height: 3rpx; background: #fffdf8; border-radius: 50%; }
+.person .head { position: absolute; top: 2rpx; left: 14rpx; width: 20rpx; height: 20rpx; border-radius: 50%; background: currentColor; }
+.person .body { position: absolute; left: 5rpx; bottom: 2rpx; width: 38rpx; height: 20rpx; border-radius: 18rpx 18rpx 5rpx 5rpx; background: currentColor; }

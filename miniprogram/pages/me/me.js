@@ -12,6 +12,8 @@ Page({
   },
 
   onShow() {
+    const tabBar = this.getTabBar && this.getTabBar()
+    if (tabBar) tabBar.setData({ selected: 2 })
     this.reloadRole()
   },
 
@@ -54,7 +56,6 @@ Page({
   goDonate() { wx.navigateTo({ url: '/pages/donate/donate' }) },
   goSzcat() { wx.navigateTo({ url: '/pages/szcat/szcat' }) },
   goCats() { wx.navigateTo({ url: '/pages/cat/list/list' }) },
-  goMobileFeed() { wx.navigateTo({ url: '/pages/mobile-feed/mobile-feed' }) },
   goUpdates() { wx.navigateTo({ url: '/pages/updates/updates' }) },
   goGuide() { wx.navigateTo({ url: '/pages/guide/guide' }) },
 })

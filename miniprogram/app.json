@@ -35,6 +35,7 @@
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
+    "custom": true,
     "color": "#7a7368",
     "selectedColor": "#3f6f52",
     "backgroundColor": "#fffdf8",
@@ -43,6 +44,10 @@
       {
         "pagePath": "pages/duty/list/list",
         "text": "任务"
+      },
+      {
+        "pagePath": "pages/mobile-feed/mobile-feed",
+        "text": "机动投喂"
       },
       {
         "pagePath": "pages/me/me",

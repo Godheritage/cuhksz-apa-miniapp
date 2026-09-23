@@ -1,4 +1,4 @@
-<view class="page" wx:if="{{ready}}">
+<view class="page has-tab" wx:if="{{ready}}">
   <view class="hero">
     <view class="hero-kicker">机动投喂</view>
     <view class="hero-title">出现日历</view>
@@ -52,4 +52,4 @@
     </view>
   </view>
 </view>
-<view class="page" wx:else><view class="card">正在加载机动投喂…</view></view>
+<view class="page has-tab" wx:else><view class="card">正在加载机动投喂…</view></view>
