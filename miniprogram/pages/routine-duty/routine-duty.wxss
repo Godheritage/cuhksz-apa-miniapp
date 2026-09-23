@@ -1,0 +1,10 @@
+.review-alert { border: 2rpx solid #e8b67f; background: #fff8ed; }
+.duty-calendar { display: flex; flex-wrap: wrap; }
+.calendar-head, .calendar-day { width: 14.285%; box-sizing: border-box; text-align: center; min-height: 74rpx; padding: 8rpx 0; }
+.calendar-head { color: #7a7368; font-size: 24rpx; }
+.calendar-day { border-radius: 12rpx; }
+.calendar-day.selected { background: #e4efe6; color: #3f6f52; }
+.calendar-count { font-size: 18rpx; color: #3f6f52; line-height: 1.2; }
+.checkin-row { padding: 8rpx 0 0 24rpx; border-left: 3rpx solid #e4efe6; margin-top: 10rpx; }
+.photo-cell { display: flex; flex-direction: column; align-items: center; }
+.remove-photo { color: #b4413b; padding: 4rpx 12rpx; }

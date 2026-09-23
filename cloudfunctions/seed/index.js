@@ -32,7 +32,7 @@ const SITE_SEED = [
   },
   {
     key: 'ta',
-    name: '示例投喂点 A',
+    name: 'TA',
     type: '投喂点',
     publicDesc: '投喂点。幼猫少加粮，优先小包装幼猫粮。',
     address: '详细位置由管理员填写。',
@@ -74,7 +74,7 @@ const SITE_SEED = [
   },
   {
     key: 'xiangbo',
-    name: '示例投喂点 C',
+    name: '祥波',
     type: '投喂点',
     publicDesc: '投喂点，可记录本次是否已喂。',
     address: '详细位置由管理员填写。',
@@ -83,8 +83,8 @@ const SITE_SEED = [
     enabled: true,
     cages: [],
     assets: [
-      { name: '示例 C食盆', category: 'bowl', quantity: 2, note: '' },
-      { name: '示例 C饮水机', category: 'water', quantity: 1, note: '' },
+      { name: '祥波食盆', category: 'bowl', quantity: 2, note: '' },
+      { name: '祥波饮水机', category: 'water', quantity: 1, note: '' },
     ],
   },
 ]
@@ -125,7 +125,7 @@ const COLLECTIONS = [
   'users', 'sites', 'cages', 'cats', 'duty_records', 'operation_logs', 'assets',
   'cat_tasks', 'access_requests', 'care_plans', 'finance_entries', 'donations',
   'move_tasks', 'szcat_config', 'szcat_claims', 'szcat_copies', 'hospital_visits', 'work_tasks',
-  'diet_logs', 'work_task_reports', 'work_task_events', 'work_credit_events', 'media_files', 'app_meta', 'adopt_candidates',
+  'diet_logs', 'work_task_reports', 'work_task_events', 'work_credit_events', 'media_files', 'app_meta', 'adopt_candidates', 'routine_duty_checkins',
 ]
 
 async function ensureCollection(name) {
@@ -360,52 +360,9 @@ exports.main = async () => {
       })))
     }
 
-    const tasks = await safeGet('work_tasks')
-    const baseId = siteIdByKey.base
-    if (baseId && !tasks.length) {
-      await db.collection('work_tasks').add({
-        data: {
-          kind: 'duty',
-          scope: 'daily',
-          siteId: baseId,
-          siteName: '示例寄养点',
-          title: '晚间巡笼',
-          content: '核对每笼水和粮，写清情况和拍照。',
-          status: 'open',
-          createdBy: OPENID,
-          createdByName: '系统种子',
-          createdAt: Date.now(),
-          report: null,
-          rejectNote: '',
-        },
-      })
-    }
   } else {
     const addedAssets = await seedAssetsForExistingSites()
     const patchedCats = await backfillCats()
-    const tasks = await safeGet('work_tasks')
-    if (!tasks.length) {
-      const base = sites.find((s) => (s.seedKey || SITE_KEY_BY_NAME[s.name]) === 'base')
-      if (base) {
-        await db.collection('work_tasks').add({
-          data: {
-            kind: 'duty',
-            scope: 'daily',
-            siteId: base._id,
-            siteName: base.name || '示例寄养点',
-            title: '晚间巡笼',
-            content: '核对每笼水和粮，写清情况和拍照。',
-            status: 'open',
-            createdBy: OPENID,
-            createdByName: '系统种子',
-            createdAt: Date.now(),
-            report: null,
-            rejectNote: '',
-          },
-        })
-        patched = true
-      }
-    }
     patched = patched || addedAssets || patchedCats > 0
   }
 

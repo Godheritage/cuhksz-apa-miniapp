@@ -15,7 +15,7 @@
     <view class="tiny mt8">{{dietLabel}}</view>
     <view class="pill warn mt8" wx:if="{{cat.provisional}}">身份待核对</view>
     <view class="muted mt8" wx:if="{{observationText}}">最近动态：{{observationText}}（过渡群记录）</view>
-    <view class="tiny mt8" wx:if="{{cat.healthStatus === 'healthy' && cat.campusStatus === 'on_campus' && !cat.needsIndividualCare}}">点位记录说明此处已补粮添水；不能据此确认这只猫已经吃到。</view>
+    <view class="tiny mt8" wx:if="{{cat.healthStatus === 'healthy' && cat.campusStatus === 'on_campus' && !cat.needsIndividualCare}}">每日执勤或点位记录说明此处已补粮添水；不能据此确认这只猫已经吃到。</view>
     <view class="tiny mt8" wx:if="{{cat.needsIndividualCare && siteDietLabel}}">所属点位：{{siteDietLabel}}（单猫情况另记）</view>
     <view class="tiny" wx:if="{{cat.careTimesToday}}">今天已被照料 {{cat.careTimesToday}} 次</view>
     <view class="chip-wrap mt12" wx:if="{{cat.photoFileIds.length}}">
@@ -78,7 +78,7 @@
 
   <view class="card" wx:if="{{canEditDiet}}">
     <view class="card-title">单猫特殊照料记录</view>
-    <view class="tiny">{{cat.needsIndividualCare ? '这只猫已标记为需要单独追踪。' : '只有需要单独追踪时在这里记；健康猫日常补粮添水优先记在所属点位。'}}</view>
+    <view class="tiny">{{cat.needsIndividualCare ? '这只猫已标记为需要单独追踪。' : '只有需要单独追踪时在这里记；健康猫日常补粮添水记在固定点位的每日执勤或其他所属点位。'}}</view>
     <view class="chip-wrap mt12">
       <view class="chip {{diet.ate ? 'on' : ''}}" data-key="ate" bindtap="toggleDiet">{{diet.ate ? '已喂食' : '未喂食'}}</view>
       <view class="chip {{diet.drank ? 'on' : ''}}" data-key="drank" bindtap="toggleDiet">{{diet.drank ? '已喂水' : '未喂水'}}</view>

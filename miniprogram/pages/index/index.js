@@ -36,7 +36,7 @@ Page({
     clearTimeout(this.jumpTimer)
     this.jumpTimer = setTimeout(() => {
       wx.switchTab({
-        url: '/pages/duty/list/list',
+        url: '/pages/routine-duty/routine-duty',
         fail: () => this.setData({ slow: true }),
       })
     }, 200)

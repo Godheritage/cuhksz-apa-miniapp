@@ -13,7 +13,7 @@ Page({
 
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
-    if (tabBar) tabBar.setData({ selected: 2, pendingCount: getApp().globalData.pendingMemberCount || 0 })
+    if (tabBar) tabBar.setData({ selected: 3, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.reloadRole()
   },
 

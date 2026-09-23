@@ -1,6 +1,6 @@
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
-const { taskStatusText, taskStatusPill, todayKey, formatTime } = require('../../../utils/format')
+const { taskStatusText, taskStatusPill, todayKey } = require('../../../utils/format')
 const photos = require('../../../utils/photos')
 
 const HERO = {
@@ -49,12 +49,11 @@ Page({
     calendarSelectedDate: todayKey(),
     calendarWeek: WEEK, calendarDays: [], calendarItems: [], calendarDayItems: [],
     calendarLoading: true,
-    calendarCheckins: [], calendarCheckinLoading: true,
   },
 
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
-    if (tabBar) tabBar.setData({ selected: 0, pendingCount: getApp().globalData.pendingMemberCount || 0 })
+    if (tabBar) tabBar.setData({ selected: 1, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.setData({ loginSlow: false })
     clearTimeout(this.slowTimer)
     this.slowTimer = setTimeout(() => {
@@ -73,7 +72,6 @@ Page({
       this.setData({ siteId })
       this.reload()
       this.reloadCalendar()
-      this.reloadCalendarCheckins()
     })
   },
 
@@ -84,7 +82,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    Promise.all([this.reload(), this.reloadCalendar(), this.reloadCalendarCheckins()])
+    Promise.all([this.reload(), this.reloadCalendar()])
       .finally(() => wx.stopPullDownRefresh())
   },
 
@@ -160,32 +158,12 @@ Page({
       })
   },
 
-  reloadCalendarCheckins() {
-    const dateKey = this.data.calendarSelectedDate
-    this.setData({ calendarCheckinLoading: true })
-    return api.call('listDuty', { dateKey, pageSize: 50 })
-      .then((data) => {
-        if (this.data.calendarSelectedDate !== dateKey) return
-        this.setData({
-          calendarCheckinLoading: false,
-          calendarCheckins: (data.records || []).map((record) => ({
-            ...record,
-            timeText: formatTime(record.arrivedAt),
-          })),
-        })
-      })
-      .catch(() => {
-        if (this.data.calendarSelectedDate === dateKey) this.setData({ calendarCheckinLoading: false })
-      })
-  },
-
   prevCalendarMonth() { this.changeCalendarMonth(-1) },
   nextCalendarMonth() { this.changeCalendarMonth(1) },
   changeCalendarMonth(amount) {
     const calendarMonth = monthShift(this.data.calendarMonth, amount)
     this.setData({ calendarMonth, calendarSelectedDate: calendarMonth + '-01' })
     this.reloadCalendar()
-    this.reloadCalendarCheckins()
   },
   pickCalendarDay(e) {
     const calendarSelectedDate = e.currentTarget.dataset.date
@@ -195,7 +173,6 @@ Page({
       calendarDays: calendarDays(this.data.calendarMonth, calendarSelectedDate, this.data.calendarItems),
       calendarDayItems: this.data.calendarItems.filter((item) => item.dateKey === calendarSelectedDate),
     })
-    this.reloadCalendarCheckins()
   },
 
   pickSite(e) {

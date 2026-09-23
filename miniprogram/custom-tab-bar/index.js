@@ -4,6 +4,7 @@ Component({
     switchTab(e) {
       const index = Number(e.currentTarget.dataset.index)
       const routes = [
+        '/pages/routine-duty/routine-duty',
         '/pages/duty/list/list',
         '/pages/mobile-feed/mobile-feed',
         '/pages/me/me',

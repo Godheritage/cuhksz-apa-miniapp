@@ -21,7 +21,10 @@
 
   <view class="card">
     <view class="card-title">这个点的投喂与添水</view>
-    <view class="tiny mt8">健康猫的日常补粮、添水记在点位；需要单猫追踪时仍去猫档单独记。</view>
+    <view class="tiny mt8" wx:if="{{isRoutineSite}}">这个固定点位改在「每日执勤」按早、午、晚、凌晨班打卡。本页只保留旧点位记录。</view>
+    <view class="btn mt12" wx:if="{{isRoutineSite}}" bindtap="goRoutineDuty">去每日执勤</view>
+    <block wx:else>
+    <view class="tiny mt8">其他点位的日常补粮、添水记在这里；需要单猫追踪时仍去猫档单独记。</view>
     <view class="muted mt12" wx:if="{{siteFeedToday}}">今天已登记 {{siteFeedToday.count}} 次 · {{siteFeedToday.fed ? '已补粮' : '未补粮'}} · {{siteFeedToday.watered ? '已添水' : '未添水'}}</view>
     <view class="muted mt12" wx:else>今天还没有点位投喂记录。</view>
     <view class="chip-wrap mt12">
@@ -34,6 +37,7 @@
       <image class="photo" wx:for="{{feedForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeFeedPhoto" />
     </view>
     <view class="btn" bindtap="saveSiteFeed">{{savingFeed ? '保存中…' : '记下这个点的投喂'}}</view>
+    </block>
     <view class="list-item" wx:for="{{siteFeedLogs}}" wx:key="_id">
       <view class="row">
         <view>

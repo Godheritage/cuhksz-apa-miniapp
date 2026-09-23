@@ -45,7 +45,7 @@ Page({
 
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
-    if (tabBar) tabBar.setData({ selected: 1, pendingCount: getApp().globalData.pendingMemberCount || 0 })
+    if (tabBar) tabBar.setData({ selected: 2, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.bindApprovedUser((user) => {
       if (tabBar) tabBar.setData({ pendingCount: user.role === 'admin' ? getApp().globalData.pendingMemberCount || 0 : 0 })
       this.reload()

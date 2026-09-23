@@ -18,6 +18,24 @@ function attachCloudOps(handlers, ctx) {
   } = ctx
   const MOVE_BOARD = { _id: 'move_board', name: '搬运' }
   const GENERAL_BOARD = { _id: 'general', name: '不限地点' }
+  const ROUTINE_SITE_SPECS = [
+    { key: 'base', name: '示例寄养点' },
+    { key: 'xiangbo', name: '祥波' },
+    { key: 'ta', name: 'TA' },
+  ]
+  const ROUTINE_SHIFTS = [
+    { id: 'morning', name: '早班' },
+    { id: 'noon', name: '午班' },
+    { id: 'evening', name: '晚班' },
+    { id: 'overnight', name: '凌晨' },
+  ]
+
+  function routineSites(sites) {
+    return ROUTINE_SITE_SPECS.map((spec) => {
+      const site = sites.find((item) => item.seedKey === spec.key || item.name === spec.name)
+      return site && site.enabled !== false ? { _id: site._id, name: site.name } : null
+    }).filter(Boolean)
+  }
 
   function addDays(dateKey, n) {
     const parts = String(dateKey).split('-').map(Number)
@@ -1178,6 +1196,74 @@ function attachCloudOps(handlers, ctx) {
     return ok({ items: [...completed.values()].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
   }
 
+  handlers.listRoutineDuty = async function listRoutineDuty(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '需通过成员审核后才能看每日执勤')
+    const monthKey = String(event.monthKey || shanghaiDateKey().slice(0, 7))
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) return fail('INVALID', '月份不合法')
+    const [sites, rows] = await Promise.all([
+      getAll('sites'), calendarRows('routine_duty_checkins', { monthKey }),
+    ])
+    const activeSites = routineSites(sites)
+    const allowed = new Set(activeSites.map((site) => site._id))
+    const logs = rows.filter((row) => allowed.has(row.siteId))
+      .sort((a, b) => (b.at || 0) - (a.at || 0))
+    const ids = [...new Set(logs.flatMap((row) => row.photoFileIds || []))]
+    const urlById = {}
+    for (let i = 0; i < ids.length; i += 50) {
+      const urls = await attachTempUrls(ids.slice(i, i + 50))
+      urls.forEach((item) => { if (item.tempFileURL) urlById[item.fileID] = item.tempFileURL })
+    }
+    return ok({
+      sites: activeSites, shifts: ROUTINE_SHIFTS,
+      logs: logs.map((row) => ({
+        _id: row._id, dateKey: row.dateKey, siteId: row.siteId,
+        shiftId: row.shiftId, fed: !!row.fed, watered: !!row.watered,
+        note: row.note || '', byName: row.byName || '', at: row.at,
+        photoFileIds: row.photoFileIds || [],
+        photoUrls: (row.photoFileIds || []).map((id) => urlById[id]).filter(Boolean),
+        mine: row.byOpenid === user.openid,
+        canDelete: isAdmin(user) || row.byOpenid === user.openid,
+      })),
+    })
+  }
+
+  handlers.submitRoutineDuty = async function submitRoutineDuty(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    const dateKey = String(event.dateKey || shanghaiDateKey())
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || dateKey > shanghaiDateKey()) {
+      return fail('INVALID', '只能登记今天或过去的执勤')
+    }
+    const shiftId = String(event.shiftId || '')
+    if (!ROUTINE_SHIFTS.some((shift) => shift.id === shiftId)) return fail('INVALID', '班次不合法')
+    const sites = routineSites(await getAll('sites'))
+    const site = sites.find((item) => item._id === event.siteId)
+    if (!site) return fail('INVALID', '请选择示例寄养点、祥波或 TA')
+    const prior = (await calendarRows('routine_duty_checkins', {
+      dateKey, siteId: site._id, shiftId, byOpenid: user.openid,
+    }))[0]
+    if (prior) return fail('ALREADY_DONE', '你已提交过这一天的这个班次')
+    const photoFileIds = photoIds(event)
+      .filter((id) => typeof id === 'string' && id.startsWith('cloud://')).slice(0, 3)
+    const doc = {
+      dateKey, monthKey: dateKey.slice(0, 7), siteId: site._id, siteName: site.name,
+      shiftId, fed: !!event.fed, watered: !!event.watered,
+      note: String(event.note || '').trim().slice(0, 200), photoFileIds,
+      byOpenid: user.openid, byName: String(user.displayName || '未署名成员').slice(0, 20),
+      at: Date.now(),
+    }
+    const added = await addDoc('routine_duty_checkins', doc)
+    return ok({ checkinId: added._id })
+  }
+
+  handlers.deleteRoutineDuty = async function deleteRoutineDuty(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    const row = await getById('routine_duty_checkins', event.checkinId)
+    if (!row) return fail('NOT_FOUND', '执勤打卡不存在')
+    if (!isAdmin(user) && row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能删自己的打卡')
+    await db.collection('routine_duty_checkins').doc(row._id).remove()
+    return ok({ checkinId: row._id })
+  }
+
   async function taskInTransaction(taskId, change) {
     return db.runTransaction(async (tx) => {
       const ref = tx.collection('work_tasks').doc(taskId)
@@ -1265,7 +1351,6 @@ function attachCloudOps(handlers, ctx) {
     const sites = await getAll('sites')
     const byKey = (key, name) => sites.find((s) => s.seedKey === key || s.name === name)
     const sitin = byKey('sitin', '思廷自动喂食机')
-    const base = byKey('base', '示例寄养点')
     const examples = [
       {
         siteId: GENERAL_BOARD._id,
@@ -1278,12 +1363,6 @@ function attachCloudOps(handlers, ctx) {
         siteName: sitin.name,
         title: '思廷补粮',
         content: '把自动喂食机加满并拍照。幼猫少加粮，优先小包装。',
-      },
-      base && {
-        siteId: base._id,
-        siteName: base.name,
-        title: '晚间巡笼',
-        content: '核对每笼水和粮，写清情况和拍照。',
       },
     ].filter(Boolean)
     for (const item of examples) {
@@ -1855,7 +1934,7 @@ function attachCloudOps(handlers, ctx) {
   handlers.adminExportOrgCsv = async function adminExportOrgCsv(_event, user) {
     if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可导出')
     const [
-      sites, cages, assets, cats, catObservations, dietLogs, siteFeedLogs, mobileFeedLogs, adoptCandidates,
+      sites, cages, assets, cats, catObservations, dietLogs, siteFeedLogs, mobileFeedLogs, routineDutyCheckins, adoptCandidates,
       donations, finance, hospitalVisits, workload,
     ] = await Promise.all([
       safeAll('sites'),
@@ -1866,6 +1945,7 @@ function attachCloudOps(handlers, ctx) {
       safeAll('diet_logs'),
       safeAll('site_feed_logs'),
       safeAll('mobile_feed_logs'),
+      calendarRows('routine_duty_checkins'),
       safeAll('adopt_candidates'),
       safeAll('donations'),
       safeAll('finance_entries'),
@@ -1881,6 +1961,7 @@ function attachCloudOps(handlers, ctx) {
       dietLogs,
       siteFeedLogs,
       mobileFeedLogs,
+      routineDutyCheckins,
       adoptCandidates,
       donations,
       finance,

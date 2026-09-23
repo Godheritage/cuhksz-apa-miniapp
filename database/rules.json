@@ -80,6 +80,10 @@
     "read": false,
     "write": false
   },
+  "routine_duty_checkins": {
+    "read": false,
+    "write": false
+  },
   "cat_observations": {
     "read": false,
     "write": false

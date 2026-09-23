@@ -16,6 +16,7 @@ Page({
     password: '',
     revealed: '',
     siteFeedToday: null,
+    isRoutineSite: false,
     siteFeedLogs: [],
     feedForm: { fed: false, watered: false, note: '', photos: [] },
     savingFeed: false,
@@ -39,6 +40,7 @@ Page({
         this.setData({
           ready: true,
           site: data.site,
+          isRoutineSite: ['示例寄养点', '祥波', 'TA'].includes(data.site.name),
           cages: data.cages || [],
           assets: (data.assets || []).map((a) => ({
             ...a,
@@ -74,6 +76,7 @@ Page({
     const key = e.currentTarget.dataset.key
     this.setData({ [`feedForm.${key}`]: !this.data.feedForm[key] })
   },
+  goRoutineDuty() { wx.switchTab({ url: '/pages/routine-duty/routine-duty' }) },
   onFeedNote(e) { this.setData({ 'feedForm.note': e.detail.value }) },
   chooseFeedPhoto() {
     photos.pick(this.data.feedForm.photos, 6)

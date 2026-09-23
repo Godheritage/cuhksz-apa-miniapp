@@ -493,8 +493,11 @@ function summarizeSiteFeed(rows, dateKey) {
 }
 
 async function siteFeedTodayMap(dateKey) {
-  let rows = []
-  try { rows = await getAll('site_feed_logs', { dateKey }) } catch (e) { return {} }
+  const [siteRows, routineRows] = await Promise.all([
+    getAll('site_feed_logs', { dateKey }).catch(() => []),
+    getAll('routine_duty_checkins', { dateKey }).catch(() => []),
+  ])
+  const rows = siteRows.concat(routineRows)
   const grouped = {}
   rows.forEach((row) => {
     if (!grouped[row.siteId]) grouped[row.siteId] = []

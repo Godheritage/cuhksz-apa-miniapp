@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-kicker">仅管理员可见</view>
     <view class="hero-title">发布任务</view>
-    <view class="hero-sub">先写要做的事，再安排时间、人数和地点。</view>
+    <view class="hero-sub">固定三点的日常投喂请去「每日执勤」；这里发布其他事项，安排时间、人数和地点。</view>
   </view>
 
   <view class="card">

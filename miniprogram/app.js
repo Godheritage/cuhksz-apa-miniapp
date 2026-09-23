@@ -74,7 +74,7 @@ App({
     const go = () => {
       if (isApproved(role)) {
         wx.switchTab({
-          url: '/pages/duty/list/list',
+          url: '/pages/routine-duty/routine-duty',
           fail: () => {},
         })
         return

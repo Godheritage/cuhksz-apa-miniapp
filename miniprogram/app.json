@@ -4,7 +4,6 @@
     "pages/guest/guest",
     "pages/duty/list/list",
     "pages/duty/detail/detail",
-    "pages/duty/checkin/checkin",
     "pages/duty/progress/progress",
     "pages/site/list/list",
     "pages/site/detail/detail",
@@ -14,6 +13,7 @@
     "pages/szcat/szcat",
     "pages/updates/updates",
     "pages/roster/roster",
+    "pages/routine-duty/routine-duty",
     "pages/mobile-feed/mobile-feed",
     "pages/guide/guide",
     "pages/admin/home/home",
@@ -41,6 +41,10 @@
     "backgroundColor": "#fffdf8",
     "borderStyle": "white",
     "list": [
+      {
+        "pagePath": "pages/routine-duty/routine-duty",
+        "text": "每日执勤"
+      },
       {
         "pagePath": "pages/duty/list/list",
         "text": "任务"
