@@ -1,1 +1,2 @@
 /* 使用全局样式 */
+.review-alert { border: 2rpx solid #e8b67f; background: #fff8ed; }

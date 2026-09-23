@@ -5,6 +5,13 @@
     <view class="hero-sub">{{heroSub}}</view>
   </view>
 
+  <view class="card review-alert" wx:if="{{isAdmin && pendingMembers > 0}}" bindtap="goReviewMembers">
+    <view class="row">
+      <view class="card-title">待审核成员 · 仅管理员可见</view>
+      <view class="pill warn">{{pendingMembers}} 人，去审批</view>
+    </view>
+  </view>
+
   <view class="card" wx:if="{{isAdmin}}" bindtap="goPublish">
     <view class="row">
       <view class="card-title">发布任务 · 仅管理员可见</view>

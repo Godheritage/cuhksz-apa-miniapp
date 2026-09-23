@@ -6,6 +6,7 @@ App({
   globalData: {
     ready: false,
     user: null,
+    pendingMemberCount: 0,
     useMock: config.useMock,
   },
 
@@ -45,6 +46,7 @@ App({
     }).then((user) => {
       if (this._refreshing === pending) this._refreshing = null
       this.globalData.user = user
+      if (user.role !== 'admin') this.globalData.pendingMemberCount = 0
       this.globalData.ready = true
       return user
     }, (err) => {

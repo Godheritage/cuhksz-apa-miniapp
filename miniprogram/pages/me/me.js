@@ -13,7 +13,7 @@ Page({
 
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
-    if (tabBar) tabBar.setData({ selected: 2 })
+    if (tabBar) tabBar.setData({ selected: 2, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.reloadRole()
   },
 
@@ -29,6 +29,8 @@ Page({
   },
 
   applyUser(user) {
+    const tabBar = this.getTabBar && this.getTabBar()
+    if (tabBar) tabBar.setData({ pendingCount: user.role === 'admin' ? getApp().globalData.pendingMemberCount || 0 : 0 })
     this.setData({
       user,
       roleLabel: roleText(user.role),

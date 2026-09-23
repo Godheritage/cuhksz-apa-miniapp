@@ -15,6 +15,7 @@ Page({
   data: {
     ready: false,
     isAdmin: false,
+    pendingMembers: 0,
     sites: [],
     siteId: '',
     scopeId: '',
@@ -26,7 +27,7 @@ Page({
 
   onShow() {
     const tabBar = this.getTabBar && this.getTabBar()
-    if (tabBar) tabBar.setData({ selected: 0 })
+    if (tabBar) tabBar.setData({ selected: 0, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.setData({ loginSlow: false })
     clearTimeout(this.slowTimer)
     this.slowTimer = setTimeout(() => {
@@ -78,10 +79,28 @@ Page({
           })),
         })),
       })
+      return this.loadPendingMembers(!!data.isAdmin)
     }).catch((err) => {
       this.setData({ loginSlow: true })
       if (err.message !== 'UNAPPROVED') wx.showToast({ title: photos.failText(err), icon: 'none' })
     })
+  },
+
+  loadPendingMembers(isAdmin) {
+    if (!isAdmin) {
+      getApp().globalData.pendingMemberCount = 0
+      this.setData({ pendingMembers: 0 })
+      const tabBar = this.getTabBar && this.getTabBar()
+      if (tabBar) tabBar.setData({ pendingCount: 0 })
+      return Promise.resolve()
+    }
+    return api.call('adminListUsers').then((data) => {
+      const count = (data.users || []).filter((user) => user.role === 'pending').length
+      getApp().globalData.pendingMemberCount = count
+      this.setData({ pendingMembers: count })
+      const tabBar = this.getTabBar && this.getTabBar()
+      if (tabBar) tabBar.setData({ pendingCount: count })
+    }).catch(() => {})
   },
 
   pickSite(e) {
@@ -104,5 +123,9 @@ Page({
 
   goPublish() {
     wx.navigateTo({ url: '/pages/admin/publish/publish' })
+  },
+
+  goReviewMembers() {
+    wx.navigateTo({ url: '/pages/admin/members/members' })
   },
 })

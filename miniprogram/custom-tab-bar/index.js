@@ -1,5 +1,5 @@
 Component({
-  data: { selected: 0 },
+  data: { selected: 0, pendingCount: 0 },
   methods: {
     switchTab(e) {
       const index = Number(e.currentTarget.dataset.index)

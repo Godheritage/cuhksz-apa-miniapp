@@ -1,20 +1,15 @@
 <view class="tab-bar">
   <view class="tab {{selected === 0 ? 'active' : ''}}" data-index="0" bindtap="switchTab">
-    <view class="icon notice">
-      <view class="tack left"></view><view class="tack right"></view>
-      <view class="notice-line first"></view><view class="notice-line second"></view><view class="notice-line third"></view>
-    </view>
+    <image class="icon-img" src="{{selected === 0 ? '/assets/tab/notice-active.png' : '/assets/tab/notice.png'}}" mode="aspectFit" />
     <view class="label">任务</view>
   </view>
   <view class="tab {{selected === 1 ? 'active' : ''}}" data-index="1" bindtap="switchTab">
-    <view class="icon cat">
-      <view class="ear left"></view><view class="ear right"></view>
-      <view class="face"><view class="eye left"></view><view class="eye right"></view><view class="nose"></view></view>
-    </view>
+    <image class="icon-img" src="{{selected === 1 ? '/assets/tab/cat-active.png' : '/assets/tab/cat.png'}}" mode="aspectFit" />
     <view class="label">机动投喂</view>
   </view>
   <view class="tab {{selected === 2 ? 'active' : ''}}" data-index="2" bindtap="switchTab">
-    <view class="icon person"><view class="head"></view><view class="body"></view></view>
+    <image class="icon-img" src="{{selected === 2 ? '/assets/tab/me-active.png' : '/assets/tab/me.png'}}" mode="aspectFit" />
+    <view class="badge" wx:if="{{pendingCount > 0}}">{{pendingCount > 9 ? '9+' : pendingCount}}</view>
     <view class="label">我的</view>
   </view>
 </view>

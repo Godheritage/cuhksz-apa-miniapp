@@ -13,6 +13,7 @@ Page({
   reload() {
     api.call('adminListUsers')
       .then((data) => {
+        getApp().globalData.pendingMemberCount = (data.users || []).filter((item) => item.role === 'pending').length
         this.setData({
           users: (data.users || []).map((item) => ({
             ...item,
