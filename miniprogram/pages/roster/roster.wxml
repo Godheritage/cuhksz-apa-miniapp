@@ -1,0 +1,26 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">排班</view>
+    <view class="hero-title">{{label}}</view>
+    <view class="hero-sub">从腾讯文档导出的表格导入。示例排班仅用于演示。门禁密码不会写进小程序。</view>
+  </view>
+
+  <view class="card" wx:if="{{isAdmin}}">
+    <view class="card-title">{{imported ? '已导入这份表' : '还没有导入'}}</view>
+    <view class="muted mt8">再导入一次会覆盖这份排班，不会把同一条工作记录重复累计。</view>
+    <view hover-class="btn-hover" class="btn" bindtap="importRoster">{{imported ? '重新导入 9.22 表格' : '导入 9.22 表格'}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!imported}}">管理员导入后，这里显示每周的豪宅执勤和投喂。义卖这类一次性活动不单独做一页，需要时发成普通任务。</view>
+
+  <block wx:if="{{imported}}">
+    <view class="chip-wrap">
+      <view class="chip {{tab === item.id ? 'on' : ''}}" wx:for="{{tabs}}" wx:key="id" data-id="{{item.id}}" bindtap="pickTab">{{item.name}}</view>
+    </view>
+    <view class="tiny mt12" wx:if="{{tab === 'feed' && feedRule}}">{{feedRule}}</view>
+    <view class="card" wx:for="{{groups}}" wx:key="title">
+      <view class="card-title">{{item.title}}</view>
+      <view class="tiny mt8" wx:for="{{item.lines}}" wx:for-item="line" wx:for-index="lineIndex" wx:key="lineIndex">{{line}}</view>
+    </view>
+  </block>
+</view>

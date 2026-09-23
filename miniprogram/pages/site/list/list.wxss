@@ -1,0 +1,5 @@
+.section-label {
+  margin: 28rpx 8rpx 14rpx;
+  color: #7a7368;
+  font-size: 24rpx;
+}

@@ -1,0 +1,8 @@
+.photo.add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  color: #7a7368;
+  border: 2rpx dashed #d7cfbf;
+}

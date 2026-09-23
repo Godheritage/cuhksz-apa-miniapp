@@ -1,0 +1,93 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">点位</view>
+    <view class="hero-title">{{site.name}}</view>
+    <view class="hero-sub">{{site.publicDesc}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">到达信息</view>
+    <view class="muted mt12" wx:if="{{!site.addressHidden}}">详细地址：{{site.address || '未填写'}}</view>
+    <view class="muted mt8" wx:if="{{!site.addressHidden}}">到达说明：{{site.lockNote || '无'}}</view>
+    <view class="muted mt12" wx:if="{{site.addressHidden}}">这是保密执勤点，默认不显示详细地址。</view>
+    <view class="tiny mt8" wx:if="{{site.addressHidden}}">申请状态：{{accessText || '未申请'}}</view>
+    <view class="tiny" wx:if="{{access.password}}">动态密码（当天有效）：{{access.password}}</view>
+    <view hover-class="btn-hover" class="btn" wx:if="{{site.addressHidden && (!access || access.status === 'rejected' || access.status === 'expired')}}" bindtap="applyAccess">申请查看地址</view>
+    <input placeholder-class="ph" class="input mt12" wx:if="{{site.addressHidden && access.status === 'approved'}}" placeholder="输入动态密码" value="{{password}}" bindinput="onPwd" />
+    <view hover-class="btn-hover" class="btn ghost" wx:if="{{site.addressHidden && access.status === 'approved'}}" bindtap="reveal">用密码查看地址</view>
+    <view class="muted mt12" wx:if="{{revealed}}">{{revealed}}</view>
+    <view hover-class="btn-hover" class="btn" bindtap="goTasks">看这个点的任务</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">这个点的投喂与添水</view>
+    <view class="tiny mt8">健康猫的日常补粮、添水记在点位；需要单猫追踪时仍去猫档单独记。</view>
+    <view class="muted mt12" wx:if="{{siteFeedToday}}">今天已登记 {{siteFeedToday.count}} 次 · {{siteFeedToday.fed ? '已补粮' : '未补粮'}} · {{siteFeedToday.watered ? '已添水' : '未添水'}}</view>
+    <view class="muted mt12" wx:else>今天还没有点位投喂记录。</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{feedForm.fed ? 'on' : ''}}" data-key="fed" bindtap="toggleFeed">{{feedForm.fed ? '已补粮' : '补粮'}}</view>
+      <view class="chip {{feedForm.watered ? 'on' : ''}}" data-key="watered" bindtap="toggleFeed">{{feedForm.watered ? '已添水' : '添水'}}</view>
+    </view>
+    <input class="input mt12" placeholder="现场备注（可选）" value="{{feedForm.note}}" bindinput="onFeedNote" />
+    <view class="btn ghost mt12" bindtap="chooseFeedPhoto">添加照片（可选）</view>
+    <view class="chip-wrap mt8" wx:if="{{feedForm.photos.length}}">
+      <image class="photo" wx:for="{{feedForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeFeedPhoto" />
+    </view>
+    <view class="btn" bindtap="saveSiteFeed">{{savingFeed ? '保存中…' : '记下这个点的投喂'}}</view>
+    <view class="list-item" wx:for="{{siteFeedLogs}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.fed ? '补粮' : ''}}{{item.fed && item.watered ? '、' : ''}}{{item.watered ? '添水' : ''}}{{!item.fed && !item.watered ? '现场记录' : ''}}</view>
+          <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
+          <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
+        </view>
+        <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteSiteFeed">删除</view>
+      </view>
+      <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
+        <image class="photo" wx:for="{{item.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoFileIds}}" bindtap="previewFeed" />
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">笼子占用</view>
+    <view class="list-item" wx:for="{{cages}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.code}}</view>
+          <view class="tiny">{{item.note || '无备注'}}</view>
+        </view>
+        <view class="pill {{item.occupied ? 'warn' : 'idle'}}">{{item.occupied ? item.cat.name : '空笼'}}</view>
+      </view>
+    </view>
+    <view class="tiny" wx:if="{{!cages.length}}">该点没有登记笼子，猫可以不占用。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">固定资产</view>
+    <view class="list-item" wx:for="{{assets}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.name}} · {{item.categoryText}}</view>
+          <view class="tiny">{{item.note || '无备注'}}</view>
+        </view>
+        <view class="pill {{item.occupied ? 'warn' : 'idle'}}">{{item.occupyText}}</view>
+      </view>
+    </view>
+    <view class="tiny" wx:if="{{!assets.length}}">该点还没有固定资产。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">在此点的猫</view>
+    <view class="list-item" wx:for="{{cats}}" wx:key="_id" data-id="{{item._id}}" bindtap="openCat">
+      <view class="row">
+        <view>
+          <view>{{item.name}}</view>
+          <view class="tiny">{{item.occupancyLabel || '未占用资源'}} · {{item.housingLabel}}</view>
+        </view>
+        <view class="pill {{item.statusClass}}">{{item.statusText}}</view>
+      </view>
+    </view>
+    <view class="tiny" wx:if="{{!cats.length}}">没有猫挂在这个执勤点。</view>
+  </view>
+</view>

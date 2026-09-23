@@ -1,0 +1,82 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">绝育</view>
+    <view class="hero-title">本月绝育指标</view>
+    <view class="hero-sub">{{disclaimer}}</view>
+  </view>
+  <view class="card">
+    <view class="card-title">官方入口</view>
+    <view class="muted mt12">官网：{{officialUrl}}</view>
+    <view class="muted mt8">平台：{{platformUrl}}</view>
+    <view class="tiny mt8">也可搜索微信公众号「深圳猫网」。不要使用任何自动抢号工具。</view>
+    <view hover-class="btn-hover" class="btn" bindtap="openOfficial">复制官网并查看说明</view>
+    <view hover-class="btn-hover" class="btn plain" data-url="{{platformUrl}}" bindtap="copyLink">复制平台链接</view>
+  </view>
+  <view class="card">
+    <view class="card-title">图文教程</view>
+    <view class="muted mt12">{{config.tutorialText || config.notice || '管理员尚未上传教程。'}}</view>
+    <view class="chip-wrap mt12" wx:if="{{config.tutorialPhotoFileIds.length}}">
+      <image
+        class="photo"
+        wx:for="{{config.tutorialPhotoFileIds}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        data-urls="{{config.tutorialPhotoFileIds}}"
+        bindtap="preview"
+      />
+    </view>
+  </view>
+  <view class="card">
+    <view class="card-title">要填写的绝育文案</view>
+    <view class="empty" wx:if="{{!copies.length}}">管理员还没发布文案。</view>
+    <view class="list-item" wx:for="{{copies}}" wx:key="_id">
+      <view class="card-title">{{item.title}}</view>
+      <view class="muted mt8">{{item.body}}</view>
+      <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
+        <image class="photo" wx:for="{{item.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoFileIds}}" bindtap="preview" />
+      </view>
+      <view hover-class="btn-hover" class="btn" data-text="{{item.body}}" bindtap="copyText">一键复制文案</view>
+      <view hover-class="btn-hover" class="btn mini plain" wx:if="{{isAdmin}}" data-id="{{item._id}}" bindtap="deleteCopy">删除</view>
+    </view>
+  </view>
+  <view class="card" wx:if="{{isAdmin}}">
+    <view class="card-title">管理员配置</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="月份 2026-09" value="{{edit.monthKey}}" bindinput="onEdit" data-key="monthKey" />
+    <input placeholder-class="ph" class="input mt12" placeholder="开放日期备注" value="{{edit.openNote}}" bindinput="onEdit" data-key="openNote" />
+    <textarea placeholder-class="ph" class="textarea" placeholder="图文教程文字" value="{{edit.tutorialText}}" bindinput="onEdit" data-key="tutorialText" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseTutorialPhoto">上传教程图片</view>
+    <view class="chip-wrap mt8" wx:if="{{edit.photos.length}}">
+      <image class="photo" wx:for="{{edit.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeTutorialPhoto" />
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveConfig">保存教程和说明</view>
+    <view class="field-label mt16">发布一条要填写的文案</view>
+    <input placeholder-class="ph" class="input mt12" placeholder="文案标题" value="{{copyForm.title}}" bindinput="onCopy" data-key="title" />
+    <textarea placeholder-class="ph" class="textarea" placeholder="文案正文，成员可一键复制" value="{{copyForm.body}}" bindinput="onCopy" data-key="body" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseCopyPhoto">上传文案配图</view>
+    <view class="chip-wrap mt8" wx:if="{{copyForm.photos.length}}">
+      <image class="photo" wx:for="{{copyForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeCopyPhoto" />
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="addCopy">发布文案</view>
+  </view>
+  <view class="card" wx:for="{{cats}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.name}}</view>
+        <view class="tiny">{{item.ageText || '年龄未填'}} · {{item.claimStatusText}}</view>
+        <view class="tiny" wx:if="{{item.claimedByName}}">负责人：{{item.claimedByName}}</view>
+      </view>
+      <view class="pill {{item.claimStatus === 'open' ? 'warn' : ''}}">{{item.claimStatusText}}</view>
+    </view>
+    <view hover-class="btn-hover" class="btn" data-id="{{item._id}}" bindtap="copyPack">复制报名资料包</view>
+    <view hover-class="btn-hover" class="btn ghost" wx:if="{{item.claimStatus === 'open'}}" data-id="{{item._id}}" bindtap="claim">认领本月报名</view>
+    <view class="chip-wrap mt12" wx:if="{{item.mine || isAdmin}}">
+      <view class="chip" data-id="{{item.claimId}}" data-status="submitted" bindtap="setStatus">已提交</view>
+      <view class="chip" data-id="{{item.claimId}}" data-status="won" bindtap="setStatus">已中签</view>
+      <view class="chip" data-id="{{item.claimId}}" data-status="lost" bindtap="setStatus">未中签</view>
+      <view class="chip" data-id="{{item.claimId}}" data-status="done" bindtap="setStatus">已手术</view>
+    </view>
+  </view>
+  <view class="empty" wx:if="{{!cats.length}}">没有勾选待绝育的在校猫。</view>
+</view>

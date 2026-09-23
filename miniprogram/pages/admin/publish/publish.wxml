@@ -1,0 +1,59 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">仅管理员可见</view>
+    <view class="hero-title">发布任务</view>
+    <view class="hero-sub">先写要做的事，再安排时间、人数和地点。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">1 · 任务内容</view>
+    <input class="input mt12" placeholder="任务标题" value="{{publish.title}}" data-key="title" bindinput="onPublish" />
+    <textarea class="textarea mt12" placeholder="写清楚要做什么" value="{{publish.content}}" data-key="content" bindinput="onPublish" />
+    <view class="btn ghost" bindtap="choosePhoto">添加图片（可选）</view>
+    <view class="chip-wrap mt8" wx:if="{{publish.photos.length}}">
+      <image class="photo" wx:for="{{publish.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removePhoto" />
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">2 · 何时执行</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{publish.scope === 'once' ? 'on' : ''}}" data-id="once" bindtap="pickScope">单次（默认）</view>
+      <view class="chip {{publish.scope === 'daily' ? 'on' : ''}}" data-id="daily" bindtap="pickScope">每日</view>
+      <view class="chip {{publish.scope === 'weekly' ? 'on' : ''}}" data-id="weekly" bindtap="pickScope">每周</view>
+    </view>
+    <view class="tiny mt8" wx:if="{{publish.scope === 'once'}}">做完即结束；可以选截止日期。</view>
+    <view class="tiny mt8" wx:if="{{publish.scope === 'daily'}}">每天都能做一次。</view>
+    <view class="tiny mt8" wx:if="{{publish.scope === 'weekly'}}">选择每周执行的星期。</view>
+    <view class="chip-wrap mt12" wx:if="{{publish.scope === 'weekly'}}">
+      <view class="chip {{item.selected ? 'on' : ''}}" wx:for="{{weekdays}}" wx:key="day" data-day="{{item.day}}" bindtap="pickWeekday">周{{item.label}}</view>
+    </view>
+    <picker wx:if="{{publish.scope === 'once'}}" mode="date" value="{{publish.deadlineDateKey}}" bindchange="onDeadline">
+      <view class="input mt12">{{publish.deadlineDateKey || '截止日期（可不填）'}}</view>
+    </picker>
+    <view class="tiny mt8" wx:if="{{publish.scope === 'once' && publish.deadlineDateKey}}" bindtap="clearDeadline">清除截止日期</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">3 · 参与人数</view>
+    <view class="row mt12">
+      <view>
+        <view>允许多人参与</view>
+        <view class="tiny">默认只有一人可以领取。</view>
+      </view>
+      <switch checked="{{publish.allowMultiple}}" bindchange="toggleMultiple" color="#3f6f52" />
+    </view>
+    <input wx:if="{{publish.allowMultiple}}" class="input mt12" type="number" placeholder="人数上限 2–50" value="{{publish.maxParticipants}}" bindinput="onMaxParticipants" />
+  </view>
+
+  <view class="card">
+    <view class="card-title">4 · 地点</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{publish.siteId === '' ? 'on' : ''}}" data-id="" bindtap="pickSite">不限地点</view>
+      <view class="chip {{publish.siteId === item._id ? 'on' : ''}}" wx:for="{{sites}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickSite">{{item.name}}</view>
+    </view>
+  </view>
+
+  <view class="btn" bindtap="publishTask">{{submitting ? '发布中…' : '发布任务'}}</view>
+</view>
+<view class="page" wx:else><view class="card">正在加载发布页面…</view></view>

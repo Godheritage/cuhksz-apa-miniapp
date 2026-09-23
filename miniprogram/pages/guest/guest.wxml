@@ -1,0 +1,33 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">身份</view>
+    <view class="hero-title">{{title}}</view>
+    <view class="hero-sub">{{desc}}</view>
+  </view>
+
+  <view class="card" wx:if="{{canApply}}">
+    <view class="card-title">提交一次申请</view>
+    <view class="field">
+      <view class="field-label">显示名称</view>
+      <input placeholder-class="ph" class="input" placeholder="例如：行动部小李" value="{{form.displayName}}" bindinput="onName" />
+    </view>
+    <view class="field">
+      <view class="field-label">备注（可选）</view>
+      <input placeholder-class="ph" class="input" placeholder="方便审核，不要写手机号" value="{{form.applyNote}}" bindinput="onNote" />
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="submitApply">提交给管理员</view>
+    <view class="tiny mt12">每个微信号只能提交一次。提交前看不到任何内部信息。</view>
+  </view>
+
+  <view class="card" wx:if="{{canApply}}">
+    <view class="card-title">通过之后</view>
+    <view class="muted mt12">管理员通过后，底部会出现任务、点位和我的。打开「我的」里的使用指南，会按你的身份说明怎么用。</view>
+  </view>
+
+  <view class="card" wx:if="{{user.role === 'pending' || user.role === 'rejected'}}">
+    <view class="card-title">{{user.role === 'rejected' ? '申请结果' : '已提交'}}</view>
+    <view class="muted mt12">名字：{{user.displayName || '未填写'}}</view>
+    <view class="muted mt8" wx:if="{{user.applyNote}}">备注：{{user.applyNote}}</view>
+    <view class="tiny mt12">每个微信号只能申请一次，不能再改、也不能再提交。</view>
+  </view>
+</view>

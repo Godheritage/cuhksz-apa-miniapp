@@ -1,0 +1,5 @@
+{
+  "_comment": "粘贴到云开发控制台「存储 → 权限设置」。客户端不可直接读文件；上传仅登录用户。展示照片由云函数 getTempFileURL。",
+  "read": false,
+  "write": "auth != null"
+}

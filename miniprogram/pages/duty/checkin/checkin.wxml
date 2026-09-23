@@ -1,0 +1,40 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">到岗</view>
+    <view class="hero-title">登记到岗</view>
+    <view class="hero-sub">只记谁、何时、到了哪个点。添食、添水、铲砂请回今日任务勾选。</view>
+  </view>
+
+  <view class="card">
+    <view class="field-label">点位</view>
+    <view class="chip-wrap mt12">
+      <view
+        class="chip {{form.siteId === item._id ? 'on' : ''}}"
+        wx:for="{{sites}}"
+        wx:key="_id"
+        data-id="{{item._id}}"
+        bindtap="pickSite"
+      >{{item.name}}</view>
+    </view>
+    <view class="tiny mt12">时间按提交时记录。定位需你授权，拒绝也可提交。</view>
+    <view class="row mt16">
+      <view class="muted">定位：{{locationLabel}}</view>
+      <view hover-class="btn-hover" class="btn mini plain" bindtap="fetchLocation">获取定位</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-label">备注（可选）</view>
+      <textarea placeholder-class="ph" class="textarea" placeholder="例如：晚班到岗，钥匙已交接到下一位" value="{{form.remark}}" bindinput="onRemark" maxlength="300" />
+    </view>
+    <view class="field">
+      <view class="field-label">现场照片（如豪宅白板，可选，最多 3 张）</view>
+      <view class="photo-row mt12">
+        <image class="photo" wx:for="{{photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindtap="removePhoto" />
+        <view class="photo add" wx:if="{{photos.length < 3}}" bindtap="choosePhoto">+</view>
+      </view>
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="submit">{{submitting ? '提交中…' : '确认到岗'}}</view>
+  </view>
+</view>

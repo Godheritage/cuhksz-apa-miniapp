@@ -1,0 +1,223 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">档案</view>
+    <view class="hero-title">{{cat.name}}</view>
+    <view class="hero-sub">{{campusLabel}} · {{dietLabel}}</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="row-main">
+        <view class="card-title">档案</view>
+      </view>
+      <view class="pill {{campusClass}}">{{campusLabel}}</view>
+    </view>
+    <view class="tiny mt8">{{dietLabel}}</view>
+    <view class="pill warn mt8" wx:if="{{cat.provisional}}">身份待核对</view>
+    <view class="muted mt8" wx:if="{{observationText}}">最近动态：{{observationText}}（过渡群记录）</view>
+    <view class="tiny mt8" wx:if="{{cat.healthStatus === 'healthy' && cat.campusStatus === 'on_campus' && !cat.needsIndividualCare}}">点位记录说明此处已补粮添水；不能据此确认这只猫已经吃到。</view>
+    <view class="tiny mt8" wx:if="{{cat.needsIndividualCare && siteDietLabel}}">所属点位：{{siteDietLabel}}（单猫情况另记）</view>
+    <view class="tiny" wx:if="{{cat.careTimesToday}}">今天已被照料 {{cat.careTimesToday}} 次</view>
+    <view class="chip-wrap mt12" wx:if="{{cat.photoFileIds.length}}">
+      <image
+        class="photo"
+        wx:for="{{cat.photoFileIds}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        data-urls="{{cat.photoFileIds}}"
+        bindtap="preview"
+      />
+    </view>
+    <view class="muted mt12" wx:if="{{hospitalStay}}">
+      就医：{{hospitalStay.hospitalName}} · {{hospitalStay.reason}}
+      · 联系人 {{hospitalStay.contactName}} {{hospitalStay.contactPhone}}
+      · 保险 {{hospitalStay.insurancePayer}}
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{canManageAdopt}}">
+    <view class="row">
+      <view class="card-title">找领养</view>
+      <view class="pill {{cat.seekingAdopt ? 'warn' : 'idle'}}">{{cat.seekingAdopt ? '找领养中' : '未开放'}}</view>
+    </view>
+    <view class="tiny mt8">只管理员能看和改。打开后可以记候选领养人，带文字和图片。</view>
+    <view hover-class="btn-hover" class="btn" bindtap="toggleSeeking">{{cat.seekingAdopt ? '关掉找领养' : '设为找领养'}}</view>
+    <view wx:if="{{cat.seekingAdopt}}">
+      <view class="empty" wx:if="{{!adoptCandidates.length}}">还没有候选领养人。</view>
+      <view class="list-item" wx:for="{{adoptCandidates}}" wx:key="_id">
+        <view class="row">
+          <view>
+            <view>{{item.name}}</view>
+            <view class="tiny">{{item.statusText}}</view>
+            <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
+          </view>
+          <view class="row-actions">
+            <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" bindtap="editCandidate">改</view>
+            <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" bindtap="deleteCandidate">删</view>
+          </view>
+        </view>
+        <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
+          <image class="photo" wx:for="{{item.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoFileIds}}" bindtap="preview" />
+        </view>
+      </view>
+      <view class="field-label mt16">{{adoptForm.candidateId ? '编辑候选领养人' : '添加候选领养人'}}</view>
+      <input placeholder-class="ph" class="input mt12" placeholder="称呼，如阿华/某家庭" value="{{adoptForm.name}}" bindinput="onAdopt" data-key="name" />
+      <view class="chip-wrap mt12">
+        <view class="chip {{adoptForm.status === item.id ? 'on' : ''}}" wx:for="{{adoptStatusOptions}}" wx:key="id" data-id="{{item.id}}" bindtap="pickAdoptStatus">{{item.name}}</view>
+      </view>
+      <textarea placeholder-class="ph" class="textarea" placeholder="情况说明，沟通进度、顾虑等" value="{{adoptForm.note}}" bindinput="onAdopt" data-key="note" />
+      <view hover-class="btn-hover" class="btn ghost" bindtap="chooseAdoptPhoto">上传图片</view>
+      <view class="chip-wrap mt8" wx:if="{{adoptForm.photos.length}}">
+        <image class="photo" wx:for="{{adoptForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeAdoptPhoto" />
+      </view>
+      <view hover-class="btn-hover" class="btn" bindtap="saveCandidate">保存这条候选</view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{canEditDiet}}">
+    <view class="card-title">单猫特殊照料记录</view>
+    <view class="tiny">{{cat.needsIndividualCare ? '这只猫已标记为需要单独追踪。' : '只有需要单独追踪时在这里记；健康猫日常补粮添水优先记在所属点位。'}}</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{diet.ate ? 'on' : ''}}" data-key="ate" bindtap="toggleDiet">{{diet.ate ? '已喂食' : '未喂食'}}</view>
+      <view class="chip {{diet.drank ? 'on' : ''}}" data-key="drank" bindtap="toggleDiet">{{diet.drank ? '已喂水' : '未喂水'}}</view>
+    </view>
+    <input placeholder-class="ph" class="input mt12" placeholder="备注，可选" value="{{diet.note}}" bindinput="onDietNote" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseDietPhoto">上传图片</view>
+    <view class="chip-wrap mt8" wx:if="{{diet.photos.length}}">
+      <image
+        wx:for="{{diet.photos}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        class="photo"
+        data-url="{{item}}"
+        data-urls="{{diet.photos}}"
+        data-index="{{index}}"
+        bindtap="preview"
+        bindlongpress="removeDietPhoto"
+      />
+    </view>
+    <view class="tiny" wx:if="{{diet.photos.length}}">已选 {{diet.photos.length}} 张，长按可删</view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveDiet">记下这次投喂</view>
+  </view>
+
+  <view class="card" wx:if="{{feedLogs.length}}">
+    <view class="card-title">投喂记录</view>
+    <view class="list-item" wx:for="{{feedLogs}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.fed ? '已喂食' : '未喂食'}} · {{item.watered ? '已喂水' : '未喂水'}}</view>
+          <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
+          <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
+        </view>
+        <view hover-class="btn-hover" class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteFeed">删除</view>
+      </view>
+      <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
+        <image
+          wx:for="{{item.photoFileIds}}"
+          wx:for-item="photo"
+          wx:key="*this"
+          src="{{photo}}"
+          mode="aspectFill"
+          class="photo"
+          data-url="{{photo}}"
+          data-urls="{{item.photoFileIds}}"
+          bindtap="preview"
+        />
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{canEditProfile}}">
+    <view class="card-title">管理员改档案</view>
+    <view class="row mt12">
+      <view>
+        <view>身份待核对</view>
+        <view class="tiny">认清这只猫后再关闭标记。</view>
+      </view>
+      <switch checked="{{cat.provisional}}" bindchange="toggleProvisional" color="#3f6f52" />
+    </view>
+    <view class="row mt12">
+      <view>
+        <view>需要单猫追踪</view>
+        <view class="tiny">不改变健康状态；有特殊照料时单独记喂食喂水。</view>
+      </view>
+      <switch checked="{{cat.needsIndividualCare}}" bindchange="toggleSpecialCare" color="#3f6f52" />
+    </view>
+    <input placeholder-class="ph" class="input mt16" placeholder="名字" value="{{edit.name}}" bindinput="onEdit" data-key="name" />
+    <input placeholder-class="ph" class="input mt12" placeholder="大致年龄" value="{{edit.ageText}}" bindinput="onEdit" data-key="ageText" />
+    <input placeholder-class="ph" class="input mt12" placeholder="品种" value="{{edit.breed}}" bindinput="onEdit" data-key="breed" />
+    <view class="chip-wrap mt12">
+      <view class="chip {{edit.gender === item.id ? 'on' : ''}}" wx:for="{{genderOptions}}" wx:key="id" data-field="gender" data-id="{{item.id}}" bindtap="pickEdit">{{item.name}}</view>
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{edit.healthStatus === item.id ? 'on' : ''}}" wx:for="{{healthOptions}}" wx:key="id" data-field="healthStatus" data-id="{{item.id}}" bindtap="pickEdit">{{item.name}}</view>
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{edit.campusStatus === item.id ? 'on' : ''}}" wx:for="{{campusOptions}}" wx:key="id" data-field="campusStatus" data-id="{{item.id}}" bindtap="pickEdit">{{item.name}}</view>
+    </view>
+    <textarea placeholder-class="ph" class="textarea" value="{{edit.notes}}" bindinput="onEdit" data-key="notes" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseCatPhoto">上传猫档图片</view>
+    <view class="chip-wrap mt8" wx:if="{{edit.photos.length}}">
+      <image class="photo" wx:for="{{edit.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeCatPhoto" />
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveProfile">保存档案</view>
+  </view>
+
+  <view class="card" wx:if="{{canManageHospital}}">
+    <view class="card-title">送去医院</view>
+    <view class="tiny">记下哪只猫、送到哪、原因、手机号是谁的、保险谁付款。这些字段会留下，接回也不会当没填过。</view>
+    <input placeholder-class="ph" class="input mt12" placeholder="医院名称" value="{{hosp.hospitalName}}" bindinput="onHosp" data-key="hospitalName" />
+    <input placeholder-class="ph" class="input mt12" placeholder="送医原因" value="{{hosp.reason}}" bindinput="onHosp" data-key="reason" />
+    <input placeholder-class="ph" class="input mt12" placeholder="手机号是谁的（联系人）" value="{{hosp.contactName}}" bindinput="onHosp" data-key="contactName" />
+    <input placeholder-class="ph" class="input mt12" placeholder="联系手机号" type="number" value="{{hosp.contactPhone}}" bindinput="onHosp" data-key="contactPhone" />
+    <input placeholder-class="ph" class="input mt12" placeholder="保险由谁付款" value="{{hosp.insurancePayer}}" bindinput="onHosp" data-key="insurancePayer" />
+    <input placeholder-class="ph" class="input mt12" placeholder="保单备注（可选）" value="{{hosp.insuranceNote}}" bindinput="onHosp" data-key="insuranceNote" />
+    <view hover-class="btn-hover" class="btn danger" bindtap="markHospital">保存就医并释放笼子/资产</view>
+    <view hover-class="btn-hover" class="btn ghost" wx:if="{{hospitalStay}}" bindtap="returnHospital">接回校园（保留这次就医记录）</view>
+  </view>
+
+  <view class="card" wx:if="{{canUpdateLocation}}">
+    <view class="card-title">更新位置 / 占用</view>
+    <view class="tiny">可不挂执勤点，也可不占用笼子或固定资产。一笼一只仅在填写笼子时生效。</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{move.siteId === '' ? 'on' : ''}}" data-id="" bindtap="pickMoveSite">不挂点</view>
+      <view class="chip {{move.siteId === item._id ? 'on' : ''}}" wx:for="{{siteOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickMoveSite">{{item.name}}</view>
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{move.cageId === '' ? 'on' : ''}}" data-id="" bindtap="pickCage">不占笼</view>
+      <view class="chip {{move.cageId === item._id ? 'on' : ''}}" wx:for="{{cageOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickCage">{{item.code}}</view>
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{move.assetId === '' ? 'on' : ''}}" data-id="" bindtap="pickAsset">不占资产</view>
+      <view class="chip {{move.assetId === item._id ? 'on' : ''}}" wx:for="{{assetOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickAsset">{{item.name}}</view>
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{move.status === item.id ? 'on' : ''}}" wx:for="{{statusOptions}}" wx:key="id" data-id="{{item.id}}" bindtap="pickMoveStatus">{{item.name}}</view>
+    </view>
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseOccupancyPhoto">上传占用/笼子图片</view>
+    <view class="chip-wrap mt8" wx:if="{{move.photos.length}}">
+      <image class="photo" wx:for="{{move.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeOccupancyPhoto" />
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveLocation">保存位置</view>
+  </view>
+
+  <view class="card" wx:if="{{canEditProfile}}">
+    <view class="card-title">限时特护</view>
+    <input placeholder-class="ph" class="input mt12" placeholder="方案名" value="{{planForm.title}}" bindinput="onPlan" data-key="title" />
+    <input placeholder-class="ph" class="input mt12" placeholder="每日项，逗号分隔" value="{{planForm.itemsText}}" bindinput="onPlan" data-key="itemsText" />
+    <input placeholder-class="ph" class="input mt12" placeholder="开始 YYYY-MM-DD" value="{{planForm.startDateKey}}" bindinput="onPlan" data-key="startDateKey" />
+    <input placeholder-class="ph" class="input mt12" placeholder="结束 YYYY-MM-DD" value="{{planForm.endDateKey}}" bindinput="onPlan" data-key="endDateKey" />
+    <textarea placeholder-class="ph" class="textarea" placeholder="操作教程文字" value="{{planForm.tutorialText}}" bindinput="onPlan" data-key="tutorialText" />
+    <view hover-class="btn-hover" class="btn" bindtap="savePlan">挂上特护</view>
+    <view class="list-item" wx:for="{{plans}}" wx:key="_id">
+      <view class="row">
+        <view>{{item.title}} {{item.startDateKey}}~{{item.endDateKey}} {{item.enabled ? '' : '（已结束）'}}</view>
+        <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" bindtap="disablePlan">结束</view>
+      </view>
+    </view>
+  </view>
+
+</view>

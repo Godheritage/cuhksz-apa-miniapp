@@ -1,0 +1,5 @@
+.splash {
+  width: 78vw;
+  text-align: center;
+  padding: 64rpx 40rpx;
+}

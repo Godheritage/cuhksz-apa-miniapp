@@ -1,0 +1,56 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">捐助</view>
+    <view class="hero-title">捐助窗口</view>
+    <view class="hero-sub">先登记物资。实体物资可以当时就发搬运，也可以登记后再发。搬运只写运到哪里，可带图片，会进任务看板。</view>
+  </view>
+
+  <view class="card" wx:if="{{isAdmin && orgBalance}}">
+    <view class="card-title">组织余额</view>
+    <view class="hero-title mt12">{{orgBalance.balanceText}}</view>
+    <view class="tiny">收入 {{orgBalance.incomeText}} · 支出 {{orgBalance.expenseText}}。只管理员可见，明细在财务台账。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">登记一笔捐助</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="物资名" value="{{form.name}}" bindinput="onField" data-key="name" />
+    <input placeholder-class="ph" class="input mt12" placeholder="数量" value="{{form.quantity}}" bindinput="onField" data-key="quantity" />
+    <input placeholder-class="ph" class="input mt12" placeholder="捐助人（可用化名）" value="{{form.donorName}}" bindinput="onField" data-key="donorName" />
+    <view class="chip {{form.electronic ? 'on' : ''}} mt16" bindtap="toggleElec">{{form.electronic ? '电子物资（不写位置）' : '实体物资（需写位置）'}}</view>
+    <input placeholder-class="ph" class="input mt12" wx:if="{{!form.electronic}}" placeholder="当前位置，如驿站/某执勤点" value="{{form.location}}" bindinput="onField" data-key="location" />
+    <view class="chip {{form.publishMove ? 'on' : ''}} mt12" wx:if="{{!form.electronic}}" bindtap="toggleMove">{{form.publishMove ? '登记时同时发布搬运' : '只登记，稍后发布搬运'}}</view>
+    <block wx:if="{{!form.electronic && form.publishMove}}">
+      <input placeholder-class="ph" class="input mt12" placeholder="运到哪里" value="{{form.toLocation}}" bindinput="onField" data-key="toLocation" />
+      <view hover-class="btn-hover" class="btn ghost" bindtap="chooseFormPhoto">上传搬运图片</view>
+      <view class="chip-wrap mt8" wx:if="{{form.photos.length}}">
+        <image class="photo" wx:for="{{form.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeFormPhoto" />
+      </view>
+    </block>
+    <view hover-class="btn-hover" class="btn" bindtap="submit">{{form.publishMove && !form.electronic ? '登记并发布搬运' : '提交登记'}}</view>
+  </view>
+
+  <view class="empty" wx:if="{{!donations.length}}">还没有捐助记录。</view>
+  <view class="card" wx:for="{{donations}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.name}} · {{item.quantity}}</view>
+        <view class="tiny">{{item.donorName}} · {{item.statusText}}</view>
+        <view class="tiny" wx:if="{{!item.electronic}}">位置：{{item.location || '未填'}}</view>
+      </view>
+      <view class="pill {{item.electronic ? 'idle' : ''}}">{{item.electronic ? '电子' : '实体'}}</view>
+    </view>
+    <view class="chip-wrap mt12" wx:if="{{isAdmin && !item.electronic}}">
+      <view class="chip" data-id="{{item._id}}" data-status="pending_in" bindtap="setStatus">待入库</view>
+      <view class="chip" data-id="{{item._id}}" data-status="on_site" bindtap="setStatus">已在点上</view>
+      <view class="chip" data-id="{{item._id}}" data-status="used" bindtap="setStatus">已用完</view>
+    </view>
+    <view wx:if="{{item.canPublishMove}}" class="mt12">
+      <input placeholder-class="ph" class="input" placeholder="运到哪里" value="{{item.moveTo}}" data-id="{{item._id}}" bindinput="onItemMoveTo" />
+      <view hover-class="btn-hover" class="btn ghost" data-id="{{item._id}}" bindtap="chooseItemPhoto">上传搬运图片</view>
+      <view class="chip-wrap mt8" wx:if="{{item.movePhotos.length}}">
+        <image class="photo" wx:for="{{item.movePhotos}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" />
+      </view>
+      <view hover-class="btn-hover" class="btn" data-id="{{item._id}}" bindtap="publishMove">发布搬运到任务看板</view>
+    </view>
+  </view>
+</view>

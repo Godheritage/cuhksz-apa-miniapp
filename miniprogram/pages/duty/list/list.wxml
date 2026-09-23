@@ -1,0 +1,63 @@
+<view class="page has-tab" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">任务</view>
+    <view class="hero-title">任务列表</view>
+    <view class="hero-sub">{{heroSub}}</view>
+  </view>
+
+  <view class="card" wx:if="{{isAdmin}}" bindtap="goPublish">
+    <view class="row">
+      <view class="card-title">发布任务 · 仅管理员可见</view>
+      <view class="pill">打开</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row" bindtap="toggleFilters">
+      <view class="card-title">{{scopeId || siteId ? '筛选任务（已筛选）' : '筛选任务（可选）'}}</view>
+      <view class="pill">{{showFilters ? '收起' : '打开'}}</view>
+    </view>
+    <block wx:if="{{showFilters}}">
+    <view class="tiny mt8">频率</view>
+    <view class="chip-wrap mt8">
+      <view class="chip {{scopeId === '' ? 'on' : ''}}" data-id="" bindtap="pickScope">全部</view>
+      <view class="chip {{scopeId === 'once' ? 'on' : ''}}" data-id="once" bindtap="pickScope">单次</view>
+      <view class="chip {{scopeId === 'daily' ? 'on' : ''}}" data-id="daily" bindtap="pickScope">每日</view>
+      <view class="chip {{scopeId === 'weekly' ? 'on' : ''}}" data-id="weekly" bindtap="pickScope">每周</view>
+    </view>
+    <view class="tiny mt16">地点</view>
+    <view class="chip-wrap mt8">
+      <view class="chip {{siteId === '' ? 'on' : ''}}" data-id="" bindtap="pickSite">全部</view>
+      <view class="chip {{siteId === 'general' ? 'on' : ''}}" data-id="general" bindtap="pickSite">不限地点</view>
+      <view class="chip {{siteId === 'move_board' ? 'on' : ''}}" data-id="move_board" bindtap="pickSite">搬运</view>
+      <view class="chip {{siteId === item._id ? 'on' : ''}}" wx:for="{{sites}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickSite">{{item.name}}</view>
+    </view>
+    </block>
+  </view>
+
+  <view class="empty" wx:if="{{!groups.length}}">这里暂时没有任务。</view>
+  <view class="card" wx:for="{{groups}}" wx:key="siteId">
+    <view class="card-title">{{item.siteName}}</view>
+    <view class="empty" wx:if="{{!item.tasks.length}}">这个地点还没有任务。</view>
+    <view class="list-item" wx:for="{{item.tasks}}" wx:for-item="task" wx:key="_id" data-id="{{task._id}}" bindtap="openTask">
+      <view class="row">
+        <view class="row-main">
+          <view>{{task.title}}</view>
+          <view class="tiny">{{task.scopeShort}} · {{task.scopeHint}}</view>
+          <view class="tiny" wx:if="{{task.status === 'claimed'}}">由 {{task.claimedByName}} 领取</view>
+          <view class="tiny" wx:if="{{task.allowMultiple && task.participantNames}}">参与：{{task.participantNames}}</view>
+        </view>
+        <view>
+          <view class="pill danger" wx:if="{{task.overdue}}">已超时</view>
+          <view class="pill {{task.statusClass}}">{{task.statusText}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>
+<view class="page" wx:else>
+  <view class="card">
+    <view class="card-title">{{loginSlow ? '任务暂时没加载出来' : '正在加载任务…'}}</view>
+    <view class="btn mt12" wx:if="{{loginSlow}}" bindtap="retryLogin">重试</view>
+  </view>
+</view>

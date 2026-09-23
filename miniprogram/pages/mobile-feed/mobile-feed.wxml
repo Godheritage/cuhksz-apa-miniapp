@@ -1,0 +1,55 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">机动投喂</view>
+    <view class="hero-title">出现日历</view>
+    <view class="hero-sub">偶尔出现的猫这类不天天出现的猫，在见到或巡查时记一笔；不自动生成每日任务。</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="chip" bindtap="prevMonth">上月</view>
+      <view class="card-title">{{monthKey}}</view>
+      <view class="chip" bindtap="nextMonth">下月</view>
+    </view>
+    <view class="calendar mt12">
+      <view class="calendar-head" wx:for="{{week}}" wx:key="*this">{{item}}</view>
+      <view class="calendar-day {{item.selected ? 'selected' : ''}}" wx:for="{{days}}" wx:key="key" data-date="{{item.blank ? '' : item.key}}" bindtap="pickDay">
+        <view wx:if="{{!item.blank}}">{{item.day}}</view>
+        <view class="calendar-mark" wx:if="{{item.seen || item.unseen}}">{{item.seen ? '●' : '○'}}</view>
+      </view>
+    </view>
+    <view class="tiny mt12">● 见到过　○ 巡查未见</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">{{selectedDate}} · 记一次</view>
+    <input class="input mt12" placeholder="猫名或临时称呼，例如：偶尔出现的猫" value="{{form.catName}}" bindinput="onName" />
+    <view class="row mt12">
+      <view>今天见到了</view>
+      <switch checked="{{form.seen}}" bindchange="toggleSeen" color="#3f6f52" />
+    </view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{form.fed ? 'on' : ''}}" data-key="fed" bindtap="toggleFlag">{{form.fed ? '已投喂' : '投喂'}}</view>
+      <view class="chip {{form.watered ? 'on' : ''}}" data-key="watered" bindtap="toggleFlag">{{form.watered ? '已添水' : '添水'}}</view>
+    </view>
+    <input class="input mt12" placeholder="现场备注（可选）" value="{{form.note}}" bindinput="onNote" />
+    <view class="btn" bindtap="save">{{saving ? '保存中…' : '保存打卡'}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">这一天的记录</view>
+    <view class="empty" wx:if="{{!selectedLogs.length}}">还没有记录。</view>
+    <view class="list-item" wx:for="{{selectedLogs}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.catName}} · {{item.seen ? '见到' : '未见到'}}</view>
+          <view class="tiny">{{item.fed ? '已投喂' : '未投喂'}} · {{item.watered ? '已添水' : '未添水'}}</view>
+          <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
+          <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
+        </view>
+        <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteLog">删除</view>
+      </view>
+    </view>
+  </view>
+</view>
+<view class="page" wx:else><view class="card">正在加载机动投喂…</view></view>

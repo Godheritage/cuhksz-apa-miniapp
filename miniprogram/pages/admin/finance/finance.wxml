@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">财务</view>
+    <view class="hero-title">财务台账</view>
+    <view class="hero-sub">{{hint}}</view>
+  </view>
+  <view class="card">
+    <view class="row">
+      <view class="pill">收入 {{income}}</view>
+      <view class="pill warn">支出 {{expense}}</view>
+      <view class="pill">结余 {{balance}}</view>
+    </view>
+  </view>
+  <view class="card">
+    <view class="card-title">记一笔</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="日期 YYYY-MM-DD" value="{{form.dateKey}}" bindinput="onField" data-key="dateKey" />
+    <view class="chip-wrap mt12">
+      <view class="chip {{form.type === 'income' ? 'on' : ''}}" data-id="income" bindtap="pickType">收入</view>
+      <view class="chip {{form.type === 'expense' ? 'on' : ''}}" data-id="expense" bindtap="pickType">支出</view>
+    </view>
+    <input placeholder-class="ph" class="input mt12" placeholder="金额" type="digit" value="{{form.amount}}" bindinput="onField" data-key="amount" />
+    <view class="chip-wrap mt12">
+      <view class="chip {{form.category === item ? 'on' : ''}}" wx:for="{{cats}}" wx:key="*this" data-id="{{item}}" bindtap="pickCat">{{item}}</view>
+    </view>
+    <input placeholder-class="ph" class="input mt12" placeholder="备注" value="{{form.remark}}" bindinput="onField" data-key="remark" />
+    <input placeholder-class="ph" class="input mt12" placeholder="经手人" value="{{form.handlerName}}" bindinput="onField" data-key="handlerName" />
+    <view hover-class="btn-hover" class="btn" bindtap="save">保存</view>
+  </view>
+  <view class="card">
+    <view class="card-title">CSV</view>
+    <textarea placeholder-class="ph" class="textarea" placeholder="粘贴 CSV 再点导入" value="{{csvText}}" bindinput="onCsv" />
+    <view hover-class="btn-hover" class="btn" bindtap="exportCsv">导出并复制</view>
+    <view hover-class="btn-hover" class="btn plain" bindtap="importCsv">从上方文本导入</view>
+  </view>
+  <view class="card" wx:for="{{entries}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view>{{item.dateKey}} · {{item.type === 'income' ? '收入' : '支出'}} {{item.amount}}</view>
+        <view class="tiny">{{item.category}} · {{item.handlerName}} · {{item.remark}}</view>
+      </view>
+      <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" catchtap="remove">删</view>
+    </view>
+  </view>
+</view>

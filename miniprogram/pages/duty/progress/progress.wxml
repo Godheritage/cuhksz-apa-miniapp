@@ -1,0 +1,63 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">今日</view>
+    <view class="hero-title">{{site.name}}</view>
+    <view class="hero-sub">{{dateKey}} 的到岗与猫位。到岗后可更新本点笼子。</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="card-title">今日到岗</view>
+      <view class="pill" wx:if="{{onDuty}}">你已到岗</view>
+    </view>
+    <view class="empty" wx:if="{{!records.length}}">今天还没有人在这里到岗。</view>
+    <view class="list-item" wx:for="{{records}}" wx:key="_id">
+      <view>{{item.displayName}} · {{item.timeText}}</view>
+      <view class="tiny">{{item.sourceText || '已到岗'}}</view>
+      <view class="muted" wx:if="{{item.remark}}">{{item.remark}}</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">固定资产</view>
+    <view class="list-item" wx:for="{{assets}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.name}} · {{item.categoryText}}</view>
+          <view class="tiny">{{item.note || '无备注'}}</view>
+        </view>
+        <view class="pill {{item.occupied ? 'warn' : 'idle'}}">{{item.occupyText}}</view>
+      </view>
+    </view>
+    <view class="tiny" wx:if="{{!assets.length}}">该点还没有固定资产。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">笼子占用</view>
+    <view class="list-item" wx:for="{{cages}}" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{item.code}}</view>
+          <view class="tiny">{{item.note || '无备注'}}</view>
+        </view>
+        <view class="pill {{item.occupied ? 'warn' : 'idle'}}">
+          {{item.occupied ? item.cat.name : '空笼'}}
+        </view>
+      </view>
+    </view>
+    <view class="tiny" wx:if="{{!cages.length}}">该点位没有登记笼子。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">本点猫咪</view>
+    <view class="list-item" wx:for="{{cats}}" wx:key="_id" data-id="{{item._id}}" bindtap="openCat">
+      <view class="row">
+        <view>
+          <view>{{item.name}}</view>
+          <view class="tiny">{{item.cageCode ? '笼 ' + item.cageCode : '未入笼'}}</view>
+        </view>
+        <view class="pill {{item.statusClass}}">{{item.statusText}}</view>
+      </view>
+    </view>
+  </view>
+</view>

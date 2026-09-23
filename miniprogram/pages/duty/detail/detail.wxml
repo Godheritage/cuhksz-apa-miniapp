@@ -1,0 +1,117 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">任务</view>
+    <view class="hero-title">{{task.title}}</view>
+    <view class="hero-sub">{{task.siteName || '不限地点'}} · {{task.scopeLabel || '每日任务'}}</view>
+  </view>
+
+  <view class="card">
+    <view class="row">
+      <view class="card-title">说明</view>
+      <view>
+        <view class="pill danger" wx:if="{{task.overdue}}">已超时</view>
+        <view class="pill {{statusClass}}">{{statusText}}</view>
+      </view>
+    </view>
+    <view class="tiny mt12">{{task.scopeHint}}</view>
+    <view class="muted mt12">{{task.content}}</view>
+    <view class="chip-wrap mt12" wx:if="{{task.photoFileIds.length}}">
+      <image
+        class="photo"
+        wx:for="{{task.photoFileIds}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        data-urls="{{task.photoFileIds}}"
+        bindtap="preview"
+      />
+    </view>
+    <view class="tiny mt12" wx:if="{{task.rejectNote}}">上次未通过：{{task.rejectNote}}</view>
+  </view>
+
+  <view class="card" wx:if="{{task.report}}">
+    <view class="card-title">回传</view>
+    <view class="muted mt12">{{task.report.workerName}} · {{submittedText}}</view>
+    <view class="muted mt8">{{task.report.description}}</view>
+    <view class="chip-wrap mt12" wx:if="{{task.report.photoFileIds.length}}">
+      <image
+        class="photo"
+        wx:for="{{task.report.photoFileIds}}"
+        wx:for-item="photo"
+        wx:key="*this"
+        src="{{photo}}"
+        mode="aspectFill"
+        data-url="{{photo}}"
+        data-urls="{{task.report.photoFileIds}}"
+        bindtap="preview"
+      />
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{task.canClaim}}">
+    <view class="card-title">领取任务</view>
+    <view class="muted mt8">{{task.allowMultiple ? '可以和其他成员一起做。领取后能看到参与者，完成后单独回传。' : '确定由你来做后点领取。完成后回到这里填写结果。'}}</view>
+    <view hover-class="btn-hover" class="btn" bindtap="claimTask">{{task.allowMultiple ? '加入这条任务' : '领取这条任务'}}</view>
+  </view>
+
+  <view class="card" wx:if="{{task.status === 'claimed' && !task.canSubmit && !task.allowMultiple}}">
+    <view class="card-title">已有人领取</view>
+    <view class="muted mt8">{{task.claimedByName}} 正在做。请选另一条待做任务。</view>
+  </view>
+
+  <view class="card" wx:if="{{task.allowMultiple}}">
+    <view class="card-title">{{task.scope === 'daily' || task.scope === 'weekly' ? '今天谁在做' : '参与者'}} · {{task.participants.length}}/{{task.maxParticipants}}</view>
+    <view class="muted mt8" wx:if="{{!task.participants.length}}">还没有人领取。</view>
+    <view class="tiny mt8" wx:for="{{task.participants}}" wx:key="key">{{item.workerName}} · {{item.dateKey}} · {{item.statusText}}</view>
+  </view>
+
+  <view class="card" wx:if="{{task.canSubmit}}">
+    <view class="card-title">做完回传</view>
+    <view class="tiny mt8" wx:if="{{task.overdue}}">已超时，仍可提交；管理员会看到超时标记。</view>
+    <view class="muted mt8">你已领取。做完后写明结果，交给管理员审核。</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="做任务的人的名字" value="{{report.workerName}}" bindinput="onReport" data-key="workerName" />
+    <textarea placeholder-class="ph" class="textarea" placeholder="任务描述" value="{{report.description}}" bindinput="onReport" data-key="description" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="choosePhoto">拍照或上传图片（如豪宅白板）</view>
+    <view class="chip-wrap mt8" wx:if="{{report.photos.length}}">
+      <image
+        class="photo"
+        wx:for="{{report.photos}}"
+        wx:key="*this"
+        src="{{item}}"
+        mode="aspectFill"
+        data-url="{{item}}"
+        data-urls="{{report.photos}}"
+        data-index="{{index}}"
+        bindtap="preview"
+        bindlongpress="removePhoto"
+      />
+    </view>
+    <view class="tiny" wx:if="{{report.photos.length}}">已选 {{report.photos.length}} 张，长按可删</view>
+    <view hover-class="btn-hover" class="btn" bindtap="submitTask">{{submitting ? '提交中…' : '交给管理员'}}</view>
+    <view hover-class="btn-hover" class="btn plain" bindtap="releaseTask">暂时做不了，退回待领</view>
+  </view>
+
+  <view class="card" wx:if="{{task.canReview && !task.allowMultiple}}">
+    <view class="card-title">审核</view>
+    <view hover-class="btn-hover" class="btn" data-ok="1" bindtap="review">通过</view>
+    <view hover-class="btn-hover" class="btn plain" data-ok="0" bindtap="review">不通过，重新上架</view>
+  </view>
+
+  <view class="card" wx:if="{{task.allowMultiple && task.canReview}}">
+    <view class="card-title">逐条审核回传 · 仅管理员可见</view>
+    <block wx:for="{{task.participants}}" wx:key="key">
+      <view class="list-item" wx:if="{{item.status === 'review'}}">
+        <view class="card-title">{{item.workerName}}</view>
+        <view class="muted mt8">{{item.report.description}}</view>
+        <view class="pill danger mt8" wx:if="{{item.report.submittedLate}}">超时回传</view>
+        <view class="btn mt12" data-key="{{item.key}}" data-ok="1" bindtap="reviewParticipant">通过</view>
+        <view class="btn plain mt8" data-key="{{item.key}}" data-ok="0" bindtap="reviewParticipant">不通过</view>
+      </view>
+    </block>
+  </view>
+
+  <view class="card" wx:if="{{task.canDelete}}">
+    <view hover-class="btn-hover" class="btn danger" bindtap="deleteTask">删除任务</view>
+  </view>
+</view>

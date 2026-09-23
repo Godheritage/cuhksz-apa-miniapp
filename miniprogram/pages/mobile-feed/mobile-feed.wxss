@@ -1,0 +1,9 @@
+.calendar { display: flex; flex-wrap: wrap; }
+.calendar-head, .calendar-day {
+  width: 14.285%; box-sizing: border-box; text-align: center;
+  min-height: 70rpx; padding: 8rpx 0;
+}
+.calendar-head { color: #7a7368; font-size: 24rpx; }
+.calendar-day { border-radius: 12rpx; }
+.calendar-day.selected { background: #e4efe6; color: #3f6f52; }
+.calendar-mark { font-size: 18rpx; color: #3f6f52; line-height: 1; }

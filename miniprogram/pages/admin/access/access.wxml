@@ -1,0 +1,21 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">审批</view>
+    <view class="hero-title">地址查看申请</view>
+    <view class="hero-sub">通过后系统给申请人发放当天有效的动态密码。密码只回给申请人，本页不展示明文，管理员也不回看。</view>
+  </view>
+  <view class="empty" wx:if="{{!requests.length}}">暂无申请。</view>
+  <view class="card" wx:for="{{requests}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.siteName}}</view>
+        <view class="tiny mt8">{{item.displayName}} · {{item.statusText}}</view>
+      </view>
+      <view class="pill {{item.status === 'pending' ? 'warn' : ''}}">{{item.statusText}}</view>
+    </view>
+    <view class="row-actions mt16" wx:if="{{item.status === 'pending'}}">
+      <view hover-class="btn-hover" class="btn mini" data-id="{{item._id}}" data-decision="approved" bindtap="decide">通过</view>
+      <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" data-decision="rejected" bindtap="decide">拒绝</view>
+    </view>
+  </view>
+</view>

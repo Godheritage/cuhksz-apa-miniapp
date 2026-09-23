@@ -1,0 +1,29 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">仅管理员可见</view>
+    <view class="hero-title">长期资料</view>
+    <view class="hero-sub">领养提醒、教程和密码备忘留给下一届管理员。普通成员看不到入口，也不能通过接口读取。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">{{noteId ? '编辑资料' : '新增资料'}}</view>
+    <view class="chip-wrap mt12">
+      <view class="chip {{form.kind === item.id ? 'on' : ''}}" wx:for="{{kinds}}" wx:key="id" data-kind="{{item.id}}" bindtap="pickKind">{{item.label}}</view>
+    </view>
+    <input class="input mt12" placeholder="标题" value="{{form.title}}" data-key="title" bindinput="onForm" />
+    <view wx:if="{{form.kind === 'password' && !revealed}}">
+      <view class="muted mt12">密码内容已隐藏。</view>
+      <view class="btn ghost mt12" bindtap="reveal">显示并编辑密码</view>
+    </view>
+    <textarea wx:else class="textarea mt12" placeholder="内容" value="{{form.body}}" data-key="body" bindinput="onForm" />
+    <view class="btn mt12" bindtap="saveNote">保存</view>
+    <view class="btn plain mt12" wx:if="{{noteId}}" bindtap="newNote">取消编辑</view>
+    <view class="btn danger mt12" wx:if="{{noteId}}" bindtap="deleteNote">删除这条资料</view>
+  </view>
+
+  <view class="empty" wx:if="{{!rows.length}}">还没有保存资料。</view>
+  <view class="card" wx:for="{{rows}}" wx:key="_id" data-id="{{item._id}}" bindtap="openNote">
+    <view class="card-title">{{item.title}}</view>
+    <view class="tiny mt8">{{item.kindLabel}} · 仅管理员可见</view>
+  </view>
+</view>

@@ -1,0 +1,37 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">点位</view>
+    <view class="hero-title">执勤点</view>
+    <view class="hero-sub">点进去看猫和物资，也可记录这个点的投喂与添水。保密地点的地址需申请。</view>
+  </view>
+  <view class="section-label">排班与猫档</view>
+  <view class="card" bindtap="goRoster">
+    <view class="row">
+      <view>
+        <view class="card-title">排班表</view>
+        <view class="tiny mt8">每周的豪宅执勤和投喂。由管理员从表格导入。</view>
+      </view>
+      <view class="pill">打开</view>
+    </view>
+  </view>
+  <view class="card" bindtap="goCats">
+    <view class="row">
+      <view>
+        <view class="card-title">校园猫档</view>
+        <view class="tiny mt8">看猫的状态、位置；特殊照料可单独记录。</view>
+      </view>
+      <view class="pill">打开</view>
+    </view>
+  </view>
+  <view class="section-label">执勤点</view>
+  <view class="card" wx:for="{{sites}}" wx:key="_id" data-id="{{item._id}}" bindtap="openSite">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.name}}</view>
+        <view class="tiny mt8">{{item.typeText}} · {{item.catCount}} 只猫在册{{item.confidential ? ' · 保密' : ''}}</view>
+      </view>
+      <view class="pill {{item.confidential ? 'warn' : ''}}">{{item.confidential ? '保密' : '详情'}}</view>
+    </view>
+    <view class="muted mt12">{{item.publicDesc}}</view>
+  </view>
+</view>

@@ -1,0 +1,59 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/guest/guest",
+    "pages/duty/list/list",
+    "pages/duty/detail/detail",
+    "pages/duty/checkin/checkin",
+    "pages/duty/progress/progress",
+    "pages/site/list/list",
+    "pages/site/detail/detail",
+    "pages/cat/list/list",
+    "pages/cat/detail/detail",
+    "pages/donate/donate",
+    "pages/szcat/szcat",
+    "pages/updates/updates",
+    "pages/roster/roster",
+    "pages/mobile-feed/mobile-feed",
+    "pages/guide/guide",
+    "pages/admin/home/home",
+    "pages/admin/members/members",
+    "pages/admin/sites/sites",
+    "pages/admin/access/access",
+    "pages/admin/finance/finance",
+    "pages/admin/export/export",
+    "pages/admin/workload/workload",
+    "pages/admin/publish/publish",
+    "pages/admin/knowledge/knowledge",
+    "pages/me/me"
+  ],
+  "window": {
+    "navigationBarTitleText": "动保执勤",
+    "navigationBarBackgroundColor": "#3f6f52",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f3efe6",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#7a7368",
+    "selectedColor": "#3f6f52",
+    "backgroundColor": "#fffdf8",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/duty/list/list",
+        "text": "任务",
+        "iconPath": "assets/tab/duty.png",
+        "selectedIconPath": "assets/tab/duty-active.png"
+      },
+      {
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "assets/tab/me.png",
+        "selectedIconPath": "assets/tab/me-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

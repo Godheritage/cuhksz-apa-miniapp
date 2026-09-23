@@ -1,0 +1,71 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="hero">
+    <view class="hero-kicker">仅管理员可见</view>
+    <view class="hero-title">管理</view>
+    <view class="hero-sub">按事情找到入口；日常任务列表仍在底部「任务」。</view>
+  </view>
+
+  <view class="section-label">成员与任务</view>
+  <view class="card" bindtap="goMembers">
+    <view class="card-title">审核成员</view>
+    <view class="muted mt8">通过申请，设置或取消管理员。</view>
+  </view>
+  <view class="card" bindtap="goPublish">
+    <view class="card-title">发布任务</view>
+    <view class="muted mt8">写内容，再选频率、参与人数和地点。</view>
+  </view>
+  <view class="card" bindtap="goWorkload">
+    <view class="card-title">工作记录与 PF</view>
+    <view class="muted mt8">逐条记录，不排名；为新人补 PF。</view>
+  </view>
+
+  <view class="section-label">猫与点位</view>
+  <view class="card" wx:if="{{audit}}">
+    <view class="card-title">资料待核对</view>
+    <view class="muted mt8">现有 {{audit.siteCount}} 个点位、{{audit.catCount}} 只猫；{{audit.missingSite}} 只在校猫未挂点位，{{audit.missingPhoto}} 只猫缺照片。请熟悉现场的管理员逐项核实，别凭猜测补资料。</view>
+  </view>
+  <view class="card" bindtap="goSites">
+    <view class="card-title">执勤点与资产</view>
+    <view class="muted mt8">维护地点、笼子和固定资产。</view>
+  </view>
+  <view class="card" bindtap="goCats">
+    <view class="card-title">猫档与领养</view>
+    <view class="muted mt8">改猫档，处理就医、特护和领养信息。</view>
+  </view>
+  <view class="card" bindtap="goAccess">
+    <view class="card-title">保密地址申请</view>
+    <view class="muted mt8">审批成员的地址查看申请。</view>
+  </view>
+  <view class="card" bindtap="goRoster">
+    <view class="card-title">排班表</view>
+    <view class="muted mt8">查看或重新导入执勤与投喂安排。</view>
+  </view>
+
+  <view class="section-label">财务与资料</view>
+  <view class="card" bindtap="goFinance">
+    <view class="card-title">财务台账</view>
+    <view class="muted mt8">记账、导入和导出 CSV。</view>
+  </view>
+  <view class="card" bindtap="goDonate">
+    <view class="card-title">捐助与搬运</view>
+    <view class="muted mt8">登记捐助，处理实体物资。</view>
+  </view>
+  <view class="card" bindtap="goSzcat">
+    <view class="card-title">绝育指标</view>
+    <view class="muted mt8">准备名单和官方报名资料。</view>
+  </view>
+  <view class="card" bindtap="goKnowledge">
+    <view class="card-title">长期资料与密码</view>
+    <view class="muted mt8">保存领养提醒、教程和密码备忘。</view>
+  </view>
+  <view class="card" bindtap="goExport">
+    <view class="card-title">导出组织资料</view>
+    <view class="muted mt8">把组织记录备份到手机。</view>
+  </view>
+</view>
+<view class="page" wx:else>
+  <view class="card">
+    <view class="card-title">{{error || '正在确认管理员身份…'}}</view>
+    <view class="btn mt12" wx:if="{{error}}" bindtap="reloadRole">重试</view>
+  </view>
+</view>

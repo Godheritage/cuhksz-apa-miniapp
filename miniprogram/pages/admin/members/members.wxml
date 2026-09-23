@@ -1,0 +1,23 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">成员</view>
+    <view class="hero-title">成员审核</view>
+    <view class="hero-sub">不用收集微信号。对方打开后先提交一次显示名称，才会出现在这里。你不能改自己的身份，只能改别人的。</view>
+  </view>
+  <view class="card" wx:for="{{users}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.displayName}}</view>
+        <view class="tiny">尾号 {{item.openidTail}} · {{item.roleText}}</view>
+        <view class="muted mt8" wx:if="{{item.applyNote}}">{{item.applyNote}}</view>
+      </view>
+      <view class="pill {{item.role === 'pending' ? 'warn' : ''}}">{{item.roleText}}</view>
+    </view>
+    <view class="chip-wrap mt16" wx:if="{{item.canChangeRole}}">
+      <view class="chip" data-id="{{item._id}}" data-role="member" bindtap="setRole">设为成员</view>
+      <view class="chip" data-id="{{item._id}}" data-role="admin" bindtap="setRole">设为管理员</view>
+      <view class="chip" data-id="{{item._id}}" data-role="rejected" bindtap="setRole">拒绝</view>
+    </view>
+    <view class="tiny mt16" wx:if="{{item.isSelf}}">这是你自己，不能改自己的身份。</view>
+  </view>
+</view>

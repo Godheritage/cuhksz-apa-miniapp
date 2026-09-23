@@ -1,0 +1,99 @@
+{
+  "_comment": "在云开发控制台为每个集合粘贴对应规则。客户端一律不可读写，敏感数据只经云函数返回。云函数使用管理员权限，不受此规则限制，但必须在函数内校验 role。",
+  "users": {
+    "read": false,
+    "write": false
+  },
+  "sites": {
+    "read": false,
+    "write": false
+  },
+  "cages": {
+    "read": false,
+    "write": false
+  },
+  "cats": {
+    "read": false,
+    "write": false
+  },
+  "duty_records": {
+    "read": false,
+    "write": false
+  },
+  "operation_logs": {
+    "read": false,
+    "write": false
+  },
+  "assets": {
+    "read": false,
+    "write": false
+  },
+  "cat_tasks": {
+    "read": false,
+    "write": false
+  },
+  "access_requests": {
+    "read": false,
+    "write": false
+  },
+  "care_plans": {
+    "read": false,
+    "write": false
+  },
+  "finance_entries": {
+    "read": false,
+    "write": false
+  },
+  "donations": {
+    "read": false,
+    "write": false
+  },
+  "move_tasks": {
+    "read": false,
+    "write": false
+  },
+  "szcat_config": {
+    "read": false,
+    "write": false
+  },
+  "szcat_claims": {
+    "read": false,
+    "write": false
+  },
+  "hospital_visits": {
+    "read": false,
+    "write": false
+  },
+  "work_tasks": {
+    "read": false,
+    "write": false
+  },
+  "diet_logs": {
+    "read": false,
+    "write": false
+  },
+  "site_feed_logs": {
+    "read": false,
+    "write": false
+  },
+  "mobile_feed_logs": {
+    "read": false,
+    "write": false
+  },
+  "cat_observations": {
+    "read": false,
+    "write": false
+  },
+  "knowledge_notes": {
+    "read": false,
+    "write": false
+  },
+  "work_pf": {
+    "read": false,
+    "write": false
+  },
+  "work_credit_events": {
+    "read": false,
+    "write": false
+  }
+}

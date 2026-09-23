@@ -1,0 +1,85 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-kicker">点位</view>
+    <view class="hero-title">执勤点维护</view>
+    <view class="hero-sub">保密地点的详细地址默认不对成员展示。不要写真实门锁密码。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">{{form.siteId ? '编辑执勤点' : '新增执勤点'}}</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="名称" value="{{form.name}}" bindinput="onField" data-key="name" />
+    <input placeholder-class="ph" class="input mt12" placeholder="公开说明" value="{{form.publicDesc}}" bindinput="onField" data-key="publicDesc" />
+    <input placeholder-class="ph" class="input mt12" placeholder="详细地址（可填演示假地址）" value="{{form.address}}" bindinput="onField" data-key="address" />
+    <input placeholder-class="ph" class="input mt12" placeholder="到达说明（不要写密码）" value="{{form.lockNote}}" bindinput="onField" data-key="lockNote" />
+    <input placeholder-class="ph" class="input mt12" placeholder="类型，管理员自填，如基地、投喂点、教学楼" value="{{form.type}}" bindinput="onField" data-key="type" />
+    <view class="chip {{form.confidential ? 'on' : ''}} mt16" bindtap="toggleConfidential">{{form.confidential ? '保密地点（已勾选）' : '勾选为保密地点'}}</view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveSite">保存执勤点</view>
+    <view hover-class="btn-hover" class="btn plain" bindtap="resetForm">清空为新增</view>
+  </view>
+
+  <view class="card" wx:if="{{assetSiteId}}">
+    <view class="card-title">{{assetForm.assetId ? '编辑固定资产' : '添加固定资产'}}</view>
+    <input placeholder-class="ph" class="input mt16" placeholder="名称，如不锈钢食盆" value="{{assetForm.name}}" bindinput="onAssetField" data-key="name" />
+    <input placeholder-class="ph" class="input mt12" placeholder="数量" type="number" value="{{assetForm.quantity}}" bindinput="onAssetField" data-key="quantity" />
+    <input placeholder-class="ph" class="input mt12" placeholder="备注" value="{{assetForm.note}}" bindinput="onAssetField" data-key="note" />
+    <view hover-class="btn-hover" class="btn ghost" bindtap="chooseAssetPhoto">上传资产图片</view>
+    <view class="chip-wrap mt8" wx:if="{{assetForm.photos.length}}">
+      <image class="photo" wx:for="{{assetForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeAssetPhoto" />
+    </view>
+    <view class="chip-wrap mt16">
+      <view class="chip {{assetForm.category === item.id ? 'on' : ''}}" wx:for="{{assetTypes}}" wx:key="id" data-id="{{item.id}}" bindtap="pickAssetCat">{{item.name}}</view>
+    </view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveAsset">保存固定资产</view>
+  </view>
+
+  <view class="card" wx:for="{{sites}}" wx:key="_id">
+    <view class="row">
+      <view>
+        <view class="card-title">{{item.name}}</view>
+        <view class="pill {{item.confidential ? 'warn' : 'idle'}} mt8">{{item.type || '点位'}} · {{item.confidential ? '保密' : '公开地址'}} · {{item.catCount || 0}} 只猫</view>
+      </view>
+      <view class="row-actions">
+        <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" bindtap="editSite">编辑</view>
+        <view hover-class="btn-hover" class="btn mini danger" data-id="{{item._id}}" bindtap="deleteSite">删除</view>
+      </view>
+    </view>
+    <view class="tiny mt8">{{item.publicDesc}}</view>
+    <view class="field-label mt16">笼子</view>
+    <view class="list-item" wx:for="{{item.cages}}" wx:for-item="cage" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{cage.code}} {{cage.occupiedBy ? '· ' + cage.occupiedBy : '· 空笼'}}</view>
+          <view class="chip-wrap mt8" wx:if="{{cage.photoFileIds.length}}">
+            <image class="photo" wx:for="{{cage.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" />
+          </view>
+        </view>
+        <view hover-class="btn-hover" class="btn mini plain" data-id="{{cage._id}}" catchtap="deleteCage">删笼</view>
+      </view>
+    </view>
+    <view class="row mt16">
+      <input placeholder-class="ph" class="input" placeholder="新笼号" value="{{item.newCage}}" data-id="{{item._id}}" bindinput="onNewCage" />
+      <view hover-class="btn-hover" class="btn mini plain" data-id="{{item._id}}" bindtap="chooseCagePhoto">笼图</view>
+      <view hover-class="btn-hover" class="btn mini" data-id="{{item._id}}" bindtap="addCage">加笼</view>
+    </view>
+    <view class="chip-wrap mt8" wx:if="{{item.newCagePhotos.length}}">
+      <image class="photo" wx:for="{{item.newCagePhotos}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" />
+    </view>
+    <view class="field-label mt16">固定资产</view>
+    <view class="list-item" wx:for="{{item.assets}}" wx:for-item="asset" wx:key="_id">
+      <view class="row">
+        <view>
+          <view>{{asset.name}} · {{asset.categoryText}} ×{{asset.quantity}}</view>
+          <view class="tiny">{{asset.occupyText}}</view>
+          <view class="chip-wrap mt8" wx:if="{{asset.photoFileIds.length}}">
+            <image class="photo" wx:for="{{asset.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" />
+          </view>
+        </view>
+        <view>
+          <view hover-class="btn-hover" class="btn mini plain" data-id="{{asset._id}}" data-site-id="{{item._id}}" bindtap="editAsset">改</view>
+          <view hover-class="btn-hover" class="btn mini plain" data-id="{{asset._id}}" bindtap="deleteAsset">删</view>
+        </view>
+      </view>
+    </view>
+    <view hover-class="btn-hover" class="btn ghost" data-id="{{item._id}}" bindtap="startAsset">添加固定资产</view>
+  </view>
+</view>

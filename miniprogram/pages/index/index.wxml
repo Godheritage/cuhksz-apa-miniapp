@@ -1,0 +1,9 @@
+<view class="guard">
+  <view class="card splash">
+    <view class="hero-kicker">动保</view>
+    <view class="hero-title">校园动保执勤</view>
+    <view class="hero-sub">正在确认你的身份…</view>
+    <view class="tiny mt12" wx:if="{{slow}}">{{error || '连接较慢，请稍候；也可以点下方重试。'}}</view>
+    <view hover-class="btn-hover" class="btn" wx:if="{{slow}}" bindtap="retry">重试</view>
+  </view>
+</view>
