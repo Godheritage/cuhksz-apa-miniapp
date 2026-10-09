@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 
 const KINDS = [
@@ -7,6 +8,13 @@ const KINDS = [
 ]
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     ready: false,
     rows: [],

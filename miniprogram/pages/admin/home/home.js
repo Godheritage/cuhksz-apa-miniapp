@@ -1,7 +1,15 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 
 Page({
-  data: { ready: false, error: '', audit: null },
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
+ data: { ready: false, error: '', audit: null },
   onShow() {
     this.reloadRole()
   },

@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
 const { campusText, campusPill, dietText, siteDietText, todayKey, formatTime } = require('../../../utils/format')
@@ -15,6 +16,13 @@ const GENDERS = [
 ]
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
     ready: false, cats: [], filters: FILTERS, campusStatus: 'on_campus', isAdmin: false,

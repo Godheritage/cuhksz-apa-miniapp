@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-kicker">每日执勤</view>
     <view class="hero-title">日常执勤点位</view>
-    <view class="hero-sub">{{siteNames || '尚未设置点位'}}，每天早、午、晚、凌晨四班。选日期和班次打卡，照片可直接拍或选。</view>
+    <view class="hero-sub">{{siteNames || '尚未设置点位'}}，每天早、午、晚、凌晨四班。可提前报名，让大家看到谁计划去；到现场后再打卡。</view>
   </view>
 
   <view class="card" wx:if="{{user.role === 'admin'}}" bindtap="goAdminSites">
@@ -28,9 +28,10 @@
       <view class="calendar-day {{item.selected ? 'selected' : ''}}" wx:for="{{days}}" wx:key="key" data-date="{{item.blank ? '' : item.key}}" bindtap="pickDay">
         <view wx:if="{{!item.blank}}">{{item.day}}</view>
         <view class="calendar-count" wx:if="{{item.count}}">{{item.count}} 班</view>
+        <view class="calendar-count" wx:if="{{item.signupCount}}">{{item.signupCount}} 人报名</view>
       </view>
     </view>
-    <view class="tiny mt12">每天 {{totalSlots}} 个班位；同班多人打卡仍算 1 班。旧表排班不会自动算已打卡。</view>
+    <view class="tiny mt12">报名只表示计划参加，不算已打卡；同一班可多人报名。旧表排班不会自动算已打卡。</view>
   </view>
 
   <view class="card">
@@ -49,10 +50,18 @@
         <view>
           <view>{{shift.name}}</view>
           <view class="tiny" wx:if="{{shift.people}}">已打卡：{{shift.people}}</view>
+          <view class="tiny" wx:if="{{shift.signupNames}}">计划去：{{shift.signupNames}}</view>
         </view>
         <view class="row">
           <view class="pill {{shift.done ? 'on' : 'idle'}}">{{shift.done ? '已打卡' : '待打卡'}}</view>
           <view class="btn mini ghost" wx:if="{{!site.archived && !shift.mine}}" data-site-id="{{site._id}}" data-shift-id="{{shift.id}}" bindtap="pickSlot">我来打卡</view>
+          <view class="btn mini plain" wx:if="{{!site.archived && !shift.mine && !shift.signedByMe && selectedDate >= todayKey}}" data-site-id="{{site._id}}" data-shift-id="{{shift.id}}" bindtap="signup">提前报名</view>
+        </view>
+      </view>
+      <view class="checkin-row" wx:for="{{shift.signups}}" wx:for-item="signupRow" wx:key="_id">
+        <view class="row">
+          <view class="tiny">{{signupRow.byName}} · 计划参加，尚未打卡</view>
+          <view class="btn mini plain" wx:if="{{signupRow.canCancel}}" data-id="{{signupRow._id}}" bindtap="cancelSignup">取消报名</view>
         </view>
       </view>
       <view class="checkin-row" wx:for="{{shift.logs}}" wx:for-item="log" wx:key="_id">

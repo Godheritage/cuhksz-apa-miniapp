@@ -1,4 +1,12 @@
+const share = require('../../utils/share.js')
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     slow: false,
     error: '',

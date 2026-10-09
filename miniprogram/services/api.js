@@ -1,4 +1,5 @@
 const config = require('../config')
+const mock = require('../mock/api')
 
 function unwrap(res) {
   const result = (res && res.result) || res
@@ -11,6 +12,9 @@ function unwrap(res) {
 }
 
 function call(action, data = {}) {
+  if (config.useMock) {
+    return mock.call(action, data)
+  }
   return wx.cloud.callFunction({
     name: 'api',
     data: { action, ...data },
@@ -18,14 +22,19 @@ function call(action, data = {}) {
 }
 
 function login() {
+  if (config.useMock) return mock.call('login')
   return wx.cloud.callFunction({ name: 'login' }).then(unwrap)
 }
 
 function seed() {
+  if (config.useMock) return mock.call('seed')
   return wx.cloud.callFunction({ name: 'seed' }).then(unwrap)
 }
 
 function uploadDutyPhoto(filePath, openidTail) {
+  if (config.useMock) {
+    return Promise.resolve(filePath)
+  }
   const name = `${Date.now()}-${Math.floor(Math.random() * 1000)}.jpg`
   return wx.cloud.uploadFile({
     cloudPath: `duty/${openidTail || 'member'}/${name}`,

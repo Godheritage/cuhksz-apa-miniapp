@@ -1,8 +1,9 @@
+const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
 
 const TABS = [
-  { id: 'duty', name: '示例寄养点执勤' },
+  { id: 'duty', name: '豪宅执勤' },
   { id: 'feed', name: '投喂' },
 ]
 
@@ -22,6 +23,13 @@ function joinNames(row) {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
     ready: false,

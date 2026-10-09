@@ -1,7 +1,15 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const { accessStatusText } = require('../../../utils/format')
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: { requests: [] },
   onShow() {
     getApp().ensureAdmin().then(() => this.reload()).catch(() => {})

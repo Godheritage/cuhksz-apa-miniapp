@@ -28,7 +28,7 @@ function attachCloudOps(handlers, ctx) {
 
   function routineSites(sites) {
     const order = (site) => {
-      const key = site.seedKey || ({ 示例寄养点: 'base', 祥波: 'xiangbo', TA: 'ta' })[site.name]
+      const key = site.seedKey || ({ 豪宅: 'base', 祥波: 'xiangbo', TA: 'ta' })[site.name]
       const index = ROUTINE_SITE_ORDER.indexOf(key)
       return index >= 0 ? index : 100 + (Number(site.sort) || 99)
     }
@@ -520,7 +520,7 @@ function attachCloudOps(handlers, ctx) {
         status: 'medical',
         siteId: '',
         cageId: '',
-        assetId: '',
+        assetId: '', assetIds: [],
         hospitalStay: stay,
         updatedAt: new Date(),
       },
@@ -982,7 +982,7 @@ function attachCloudOps(handlers, ctx) {
         canRelease: !!(own && own.status === 'claimed'),
         canSubmit: !!(own && own.status === 'claimed'),
         canReview: isAdmin(user) && all.some((p) => p.status === 'review'),
-        canDelete: isAdmin(user),
+        canDelete: isAdmin(user) || !!(viewed.createdBy && viewed.createdBy === user.openid),
         report: null,
       }
     }
@@ -994,7 +994,7 @@ function attachCloudOps(handlers, ctx) {
       canSubmit: viewed.status === 'claimed' && viewed.dueToday && viewed.claimedBy === user.openid,
       claimedByName: viewed.status === 'claimed' ? (viewed.claimedByName || '成员') : '',
       canReview: viewed.status === 'review' && isAdmin(user),
-      canDelete: isAdmin(user),
+      canDelete: isAdmin(user) || !!(viewed.createdBy && viewed.createdBy === user.openid),
       report: viewed.report || null,
     }
   }
@@ -1061,6 +1061,10 @@ function attachCloudOps(handlers, ctx) {
     const todayKey = shanghaiDateKey()
     const overlays = await loadTaskOverlays()
     tasks = tasks.map((t) => applyTaskOverlay(t, overlays.reports, overlays.events, todayKey))
+    const mineFilter = String(event.mineFilter || '')
+    const submittedTaskIds = mineFilter === 'done' ? new Set(overlays.reports
+      .filter((report) => report.submittedBy === user.openid)
+      .map((report) => report.taskId)) : null
     const wanted = String(event.siteId || '')
     const wantedScope = parseScope(event.scope, '')
     const boardSites = [GENERAL_BOARD, MOVE_BOARD].concat(sites)
@@ -1072,6 +1076,10 @@ function attachCloudOps(handlers, ctx) {
         tasks: tasks
           .filter((t) => {
             if (wantedScope && normalizeScope(t) !== wantedScope) return false
+            if (mineFilter === 'published' && t.createdBy !== user.openid) return false
+            if (mineFilter === 'done' && !submittedTaskIds.has(t._id)
+              && !(t.report && t.report.submittedBy === user.openid)
+              && !(t.participants || []).some((p) => p.report && p.report.submittedBy === user.openid)) return false
             if (site._id === MOVE_BOARD._id) return t.kind === 'move' || t.siteId === MOVE_BOARD._id
             if (site._id === GENERAL_BOARD._id) {
               return t.kind !== 'move' && (!t.siteId || t.siteId === GENERAL_BOARD._id)
@@ -1111,8 +1119,8 @@ function attachCloudOps(handlers, ctx) {
   }
 
   handlers.adminPublishWorkTask = async function adminPublishWorkTask(event, user) {
-    if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可发布任务')
-    const sourceId = String(event.sourceId || '').trim().slice(0, 80)
+    if (!isApproved(user)) return fail('FORBIDDEN', '通过审核的成员才能发布任务')
+    const sourceId = isAdmin(user) ? String(event.sourceId || '').trim().slice(0, 80) : ''
     if (sourceId) {
       const existing = (await getAll('work_tasks', { sourceId }))[0]
       if (existing) return ok({ taskId: existing._id, skipped: true })
@@ -1137,6 +1145,13 @@ function attachCloudOps(handlers, ctx) {
     }
     const deadlineDateKey = parseDeadlineDateKey(event.deadlineDateKey)
     const photos = photoIds(event)
+    const completionDescription = String(event.completionDescription || '').trim().slice(0, 400)
+    const completionPhotos = Array.isArray(event.completionPhotoFileIds)
+      ? event.completionPhotoFileIds.filter((id) => typeof id === 'string' && id.startsWith('cloud://')).slice(0, 6) : []
+    if (completionPhotos.length && !completionDescription) return fail('INVALID', '上传完成照片时请填写完成情况')
+    const completedNow = !!completionDescription
+    const todayKey = shanghaiDateKey()
+    const workerName = String(user.displayName || '成员').trim().slice(0, 20)
     const data = {
       kind: 'duty',
       scope,
@@ -1151,17 +1166,45 @@ function attachCloudOps(handlers, ctx) {
       title,
       content,
       photoFileIds: photos,
-      status: 'open',
+      status: completedNow && !allowMultiple ? 'review' : 'open',
       workflowV2: true,
       createdBy: user.openid,
-      createdByName: user.displayName || '管理员',
+      createdByName: user.displayName || '成员',
+      publisherTag: isAdmin(user) ? '' : '普通成员发布',
       createdAt: Date.now(),
       sourceId,
       sourceAt: Number(event.sourceAt) || 0,
       report: null,
       rejectNote: '',
     }
-    const added = await addDoc('work_tasks', data)
+    if (completedNow && !applyScopeView(data, todayKey).dueToday) {
+      return fail('INVALID', '所选频率今天不执行，已完成的任务请选单次或今天对应的星期')
+    }
+    let added
+    if (completedNow) {
+      added = await db.runTransaction(async (tx) => {
+        const report = { description: completionDescription, workerName,
+          photoFileIds: completionPhotos, submittedBy: user.openid,
+          submittedAt: Date.now(), submittedLate: !!(deadlineDateKey && todayKey > deadlineDateKey) }
+        if (allowMultiple) {
+          const key = `claim:${Date.now()}:${Math.floor(Math.random() * 1000000)}`
+          const participant = { key, dateKey: todayKey, cycleKey: taskCycleKey(data, todayKey),
+            openid: user.openid, workerName, status: 'review', report: { ...report, participantKey: key } }
+          data.participants = [participant]
+        } else {
+          data.claimedBy = user.openid
+          data.claimedByName = workerName
+          data.claimedDateKey = todayKey
+          data.report = report
+        }
+        const result = await tx.collection('work_tasks').add({ data })
+        await tx.collection('work_task_reports').add({ data: {
+          ...report, taskId: result._id,
+          ...(allowMultiple ? { participantKey: data.participants[0].key } : {}),
+        } })
+        return result
+      })
+    } else added = await addDoc('work_tasks', data)
     quietLog(user, { action: 'publish_work_task', targetType: 'work_task', targetId: added._id, siteId: data.siteId })
     return ok({ taskId: added._id, task: decorateWorkTask(Object.assign({ _id: added._id }, data), user) })
   }
@@ -1205,11 +1248,14 @@ function attachCloudOps(handlers, ctx) {
     ])
     const activeSites = routineSites(sites)
     const allowed = new Set(activeSites.map((site) => site._id))
-    const logs = rows.sort((a, b) => (b.at || 0) - (a.at || 0))
+    const logs = rows.filter((row) => row.kind !== 'signup').sort((a, b) => (b.at || 0) - (a.at || 0))
+    const checkedIn = new Set(logs.map((row) => [row.dateKey, row.siteId, row.shiftId, row.byOpenid].join('|')))
+    const signups = rows.filter((row) => row.kind === 'signup'
+      && !checkedIn.has([row.dateKey, row.siteId, row.shiftId, row.byOpenid].join('|')))
     const siteById = Object.fromEntries(sites.map((site) => [site._id, site]))
-    const archivedSites = [...new Set(logs.map((row) => row.siteId).filter((id) => !allowed.has(id)))]
+    const archivedSites = [...new Set(logs.concat(signups).map((row) => row.siteId).filter((id) => !allowed.has(id)))]
       .map((id) => ({ _id: id, name: siteById[id]?.name
-        || logs.find((row) => row.siteId === id)?.siteName || '历史点位', archived: true }))
+        || logs.concat(signups).find((row) => row.siteId === id)?.siteName || '历史点位', archived: true }))
     const ids = [...new Set(logs.flatMap((row) => row.photoFileIds || []))]
     const urlById = {}
     for (let i = 0; i < ids.length; i += 50) {
@@ -1218,6 +1264,11 @@ function attachCloudOps(handlers, ctx) {
     }
     return ok({
       sites: activeSites, archivedSites, shifts: ROUTINE_SHIFTS,
+      signups: signups.map((row) => ({
+        _id: row._id, dateKey: row.dateKey, siteId: row.siteId, shiftId: row.shiftId,
+        byName: row.byName || '成员', mine: row.byOpenid === user.openid,
+        canCancel: isAdmin(user) || row.byOpenid === user.openid,
+      })),
       logs: logs.map((row) => ({
         _id: row._id, dateKey: row.dateKey, siteId: row.siteId,
         shiftId: row.shiftId, fed: !!row.fed, watered: !!row.watered,
@@ -1243,25 +1294,61 @@ function attachCloudOps(handlers, ctx) {
     if (!site) return fail('INVALID', '请选择已开启每日执勤的点位')
     const prior = (await calendarRows('routine_duty_checkins', {
       dateKey, siteId: site._id, shiftId, byOpenid: user.openid,
-    }))[0]
+    })).find((row) => row.kind !== 'signup')
     if (prior) return fail('ALREADY_DONE', '你已提交过这一天的这个班次')
     const photoFileIds = photoIds(event)
       .filter((id) => typeof id === 'string' && id.startsWith('cloud://')).slice(0, 3)
     const doc = {
-      dateKey, monthKey: dateKey.slice(0, 7), siteId: site._id, siteName: site.name,
+      kind: 'checkin', dateKey, monthKey: dateKey.slice(0, 7), siteId: site._id, siteName: site.name,
       shiftId, fed: !!event.fed, watered: !!event.watered,
       note: String(event.note || '').trim().slice(0, 200), photoFileIds,
       byOpenid: user.openid, byName: String(user.displayName || '未署名成员').slice(0, 20),
       at: Date.now(),
     }
     const added = await addDoc('routine_duty_checkins', doc)
+    const ownSignup = (await calendarRows('routine_duty_checkins', {
+      dateKey, siteId: site._id, shiftId, byOpenid: user.openid,
+    })).find((row) => row.kind === 'signup')
+    if (ownSignup) await db.collection('routine_duty_checkins').doc(ownSignup._id).remove().catch(() => {})
     return ok({ checkinId: added._id })
+  }
+
+  handlers.signupRoutineDuty = async function signupRoutineDuty(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    const dateKey = String(event.dateKey || '')
+    const today = shanghaiDateKey()
+    const limit = shanghaiDateKey(new Date(Date.now() + 60 * 86400000))
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || dateKey < today || dateKey > limit) {
+      return fail('INVALID', '只能报名今天起 60 天内的执勤')
+    }
+    const shiftId = String(event.shiftId || '')
+    if (!ROUTINE_SHIFTS.some((shift) => shift.id === shiftId)) return fail('INVALID', '班次不合法')
+    const site = routineSites(await getAll('sites')).find((item) => item._id === event.siteId)
+    if (!site) return fail('INVALID', '请选择已开启每日执勤的点位')
+    const key = { dateKey, siteId: site._id, shiftId, byOpenid: user.openid }
+    const existing = await calendarRows('routine_duty_checkins', key)
+    if (existing.some((row) => row.kind !== 'signup')) return fail('ALREADY_DONE', '你已打过这一班')
+    if (existing.some((row) => row.kind === 'signup')) return fail('ALREADY_SIGNED', '你已报名这一班')
+    const added = await addDoc('routine_duty_checkins', {
+      ...key, kind: 'signup', monthKey: dateKey.slice(0, 7), siteName: site.name,
+      byName: String(user.displayName || '未署名成员').slice(0, 20), at: Date.now(),
+    })
+    return ok({ signupId: added._id })
+  }
+
+  handlers.cancelRoutineDutySignup = async function cancelRoutineDutySignup(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    const row = await getById('routine_duty_checkins', event.signupId)
+    if (!row || row.kind !== 'signup') return fail('NOT_FOUND', '报名不存在')
+    if (!isAdmin(user) && row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能取消自己的报名')
+    await db.collection('routine_duty_checkins').doc(row._id).remove()
+    return ok({ signupId: row._id })
   }
 
   handlers.deleteRoutineDuty = async function deleteRoutineDuty(event, user) {
     if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
     const row = await getById('routine_duty_checkins', event.checkinId)
-    if (!row) return fail('NOT_FOUND', '执勤打卡不存在')
+    if (!row || row.kind === 'signup') return fail('NOT_FOUND', '执勤打卡不存在')
     if (!isAdmin(user) && row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能删自己的打卡')
     await db.collection('routine_duty_checkins').doc(row._id).remove()
     return ok({ checkinId: row._id })
@@ -1497,9 +1584,10 @@ function attachCloudOps(handlers, ctx) {
   }
 
   handlers.adminDeleteWorkTask = async function adminDeleteWorkTask(event, user) {
-    if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可删除任务')
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
     const task = await getById('work_tasks', event.taskId)
     if (!task) return fail('NOT_FOUND', '任务不存在')
+    if (!isAdmin(user) && task.createdBy !== user.openid) return fail('FORBIDDEN', '只能删除自己发布的任务')
     await db.collection('work_tasks').doc(task._id).remove()
     quietLog(user, { action: 'delete_work_task', targetType: 'work_task', targetId: task._id, siteId: task.siteId })
     return ok({ taskId: task._id })
@@ -1717,7 +1805,7 @@ function attachCloudOps(handlers, ctx) {
       source: '动物保护协会2027过渡群', sourceId,
     }
     await db.collection('cats').doc(cat._id).update({ data: {
-      status, campusStatus, siteId, cageId: '', assetId: '',
+      status, campusStatus, siteId, cageId: '', assetId: '', assetIds: [],
       lastObservation, updatedAt: Date.now(),
     } })
     await addDoc('cat_observations', {
@@ -1752,7 +1840,7 @@ function attachCloudOps(handlers, ctx) {
         note, source: '动物保护协会2027过渡群', sourceId } : null
     const data = {
       name, status: event.status === 'in_care' ? 'in_care' : 'observe',
-      campusStatus: 'on_campus', siteId, cageId: '', assetId: '',
+      campusStatus: 'on_campus', siteId, cageId: '', assetId: '', assetIds: [],
       gender, healthStatus: 'unknown', ageText: '', breed: '',
       notes: note, photoFileIds: [],
       provisional: !!event.provisional, needsIndividualCare: !!event.needsIndividualCare,
@@ -1916,7 +2004,7 @@ function attachCloudOps(handlers, ctx) {
           campusStatus: 'on_campus',
           siteId: '',
           cageId: '',
-          assetId: '',
+          assetId: '', assetIds: [],
           ageText: '',
           gender: 'unknown',
           breed: '',
@@ -1964,7 +2052,7 @@ function attachCloudOps(handlers, ctx) {
       dietLogs,
       siteFeedLogs,
       mobileFeedLogs,
-      routineDutyCheckins,
+      routineDutyCheckins: routineDutyCheckins.filter((row) => row.kind !== 'signup'),
       adoptCandidates,
       donations,
       finance,

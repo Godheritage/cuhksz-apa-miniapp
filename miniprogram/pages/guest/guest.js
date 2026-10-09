@@ -1,3 +1,4 @@
+const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const config = require('../../config')
 
@@ -17,6 +18,13 @@ const COPY = {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     useMock: config.useMock,
     user: { role: 'guest' },
@@ -27,12 +35,46 @@ Page({
   },
 
   onShow() {
-    getApp().getUser().then((user) => {
+    this._guestVisible = true
+    this.refreshIdentity()
+    this.startIdentityPolling()
+  },
+
+  onHide() {
+    this._guestVisible = false
+    this.stopIdentityPolling()
+  },
+
+  onUnload() {
+    this._guestVisible = false
+    this.stopIdentityPolling()
+  },
+
+  refreshIdentity() {
+    return getApp().getUser(true).then((user) => {
       this.applyUser(user)
       if (user && (user.role === 'member' || user.role === 'admin')) {
         getApp().routeByRole(user)
       }
-    })
+    }).catch(() => {})
+  },
+
+  startIdentityPolling() {
+    this.stopIdentityPolling()
+    this._identityTimer = setInterval(() => {
+      if (!this._guestVisible) return
+      const role = this.data.user && this.data.user.role
+      if (role !== 'pending' && role !== 'rejected') {
+        this.stopIdentityPolling()
+        return
+      }
+      this.refreshIdentity()
+    }, 5000)
+  },
+
+  stopIdentityPolling() {
+    if (this._identityTimer) clearInterval(this._identityTimer)
+    this._identityTimer = null
   },
 
   applyUser(user) {
@@ -63,6 +105,7 @@ Page({
       .then((data) => {
         getApp().setUser(data.user)
         this.applyUser(data.user)
+        this.startIdentityPolling()
         wx.showToast({ title: '已提交', icon: 'success' })
       })
       .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))

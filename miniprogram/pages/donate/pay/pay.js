@@ -1,6 +1,14 @@
+const share = require('../../../utils/share.js')
 const config = require('../../../config')
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     qrPath: config.donationQrPath || '',
     recipient: config.donationRecipient || '',

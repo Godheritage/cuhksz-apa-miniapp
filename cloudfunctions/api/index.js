@@ -113,7 +113,22 @@ function normalizeDiet(diet) {
   }
 }
 
+function catAssetIds(cat) {
+  if (Array.isArray(cat && cat.assetIds)) return [...new Set(cat.assetIds.filter(Boolean).map(String))]
+  return cat && cat.assetId ? [String(cat.assetId)] : []
+}
+
+function eventAssetIds(event) {
+  if (Object.prototype.hasOwnProperty.call(event || {}, 'assetIds')) {
+    if (!Array.isArray(event.assetIds)) return { error: '固定资产必须是数组' }
+    if (event.assetIds.some((value) => typeof value !== 'string')) return { error: '固定资产 ID 不合法' }
+    return { ids: [...new Set(event.assetIds.filter(Boolean))] }
+  }
+  return { ids: event && event.assetId ? [String(event.assetId)] : [] }
+}
+
 function publicCat(cat, extra = {}) {
+  const assetIds = catAssetIds(cat)
   return {
     _id: cat._id,
     name: cat.name,
@@ -121,7 +136,8 @@ function publicCat(cat, extra = {}) {
     campusStatus: cat.campusStatus || 'on_campus',
     siteId: cat.siteId || '',
     cageId: cat.cageId || '',
-    assetId: cat.assetId || '',
+    assetId: assetIds[0] || '',
+    assetIds,
     notes: cat.notes || '',
     ageText: cat.ageText || '',
     gender: cat.gender || 'unknown',
@@ -156,10 +172,11 @@ function publicHospitalStay(stay) {
   }
 }
 
-function occupancyLabel(cage, asset) {
+function occupancyLabel(cage, assets) {
   const parts = []
   if (cage) parts.push(`笼 ${cage.code}`)
-  if (asset) parts.push(asset.name)
+  const rows = Array.isArray(assets) ? assets : (assets ? [assets] : [])
+  if (rows.length) parts.push(rows.map((asset) => asset.name).join('、'))
   return parts.length ? parts.join(' · ') : '未占用资源'
 }
 
@@ -400,7 +417,7 @@ function mapAssetRows(assets, cats) {
     .slice()
     .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh'))
     .map((asset) => {
-      const occupants = cats.filter((c) => c.assetId === asset._id)
+      const occupants = cats.filter((c) => catAssetIds(c).includes(asset._id))
       return {
         _id: asset._id,
         name: asset.name,
@@ -449,12 +466,12 @@ async function buildSiteDetail(siteId) {
       .sort((a, b) => String(a.name).localeCompare(String(b.name), 'zh'))
       .map((cat) => {
         const cage = cages.find((c) => c._id === cat.cageId)
-        const asset = assets.find((a) => a._id === cat.assetId)
+        const catAssets = assets.filter((a) => catAssetIds(cat).includes(a._id))
         return {
           ...publicCat(cat),
           cageCode: cage ? cage.code : '',
-          assetName: asset ? asset.name : '',
-          occupancyLabel: occupancyLabel(cage, asset),
+          assetName: catAssets.map((a) => a.name).join('、'),
+          occupancyLabel: occupancyLabel(cage, catAssets),
         }
       }),
   }
@@ -503,7 +520,7 @@ async function siteFeedTodayMap(dateKey) {
     getAll('site_feed_logs', { dateKey }).catch(() => []),
     getAll('routine_duty_checkins', { dateKey }).catch(() => []),
   ])
-  const rows = siteRows.concat(routineRows)
+  const rows = siteRows.concat(routineRows.filter((row) => row.kind !== 'signup'))
   const grouped = {}
   rows.forEach((row) => {
     if (!grouped[row.siteId]) grouped[row.siteId] = []
@@ -693,7 +710,7 @@ const handlers = {
       .map((cat) => {
         const site = siteMap[cat.siteId]
         const cage = cageMap[cat.cageId]
-        const asset = assetMap[cat.assetId]
+        const catAssets = catAssetIds(cat).map((id) => assetMap[id]).filter(Boolean)
         const campus = cat.campusStatus || 'on_campus'
         const resident = campus !== 'off_campus' && campus !== 'medical' && !!site && (!!cat.cageId || site.type === 'base' || site.type === '基地')
         let housingLabel = '流动，无需每日点检'
@@ -712,8 +729,8 @@ const handlers = {
           siteName: site ? site.name : '',
           siteFeedToday: cat.siteId ? (siteFeedMap[cat.siteId] || null) : null,
           cageCode: cage ? cage.code : '',
-          assetName: asset ? asset.name : '',
-          occupancyLabel: occupancyLabel(cage, asset),
+          assetName: catAssets.map((a) => a.name).join('、'),
+          occupancyLabel: occupancyLabel(cage, catAssets),
           housingLabel,
           resident,
         }
@@ -726,10 +743,9 @@ const handlers = {
     const cat = await getById('cats', event.catId)
     if (!cat) return fail('NOT_FOUND', '找不到这只猫')
     const dateKey = shanghaiDateKey()
-    const [site, cage, asset, feedLogs, sites, cages, assets] = await Promise.all([
+    const [site, cage, feedLogs, sites, cages, assets] = await Promise.all([
       cat.siteId ? getById('sites', cat.siteId) : Promise.resolve(null),
       cat.cageId ? getById('cages', cat.cageId) : Promise.resolve(null),
-      cat.assetId ? getById('assets', cat.assetId) : Promise.resolve(null),
       listFeedLogs(cat._id, user),
       getAll('sites', { enabled: _.neq(false) }),
       cat.siteId ? getAll('cages', { siteId: cat.siteId, enabled: _.neq(false) }) : Promise.resolve([]),
@@ -740,6 +756,7 @@ const handlers = {
     const catPhotoMap = await loadMediaMap('cat')
     const siteFeedMap = cat.siteId ? await siteFeedTodayMap(dateKey) : {}
     const cagePhotoMap = await loadMediaMap('cage')
+    const catAssets = assets.filter((asset) => catAssetIds(cat).includes(asset._id))
     const campus = cat.campusStatus || 'on_campus'
     const resident = campus !== 'off_campus' && campus !== 'medical' && !!site && (!!cat.cageId || site.type === 'base' || site.type === '基地')
     let housingLabel = '流动，无需每日点检'
@@ -773,7 +790,8 @@ const handlers = {
       feedLogs,
       site: site ? siteForMember(site) : null,
       cage: cage ? { _id: cage._id, code: cage.code, note: cage.note || '', photoFileIds: cagePhotoMap[cage._id] || cage.photoFileIds || [] } : null,
-      asset: asset ? { _id: asset._id, name: asset.name, category: asset.category } : null,
+      asset: catAssets[0] ? { _id: catAssets[0]._id, name: catAssets[0].name, category: catAssets[0].category } : null,
+      assets: catAssets.map((asset) => ({ _id: asset._id, name: asset.name, category: asset.category })),
       canUpdateLocation: isApproved(user),
       canEditProfile: isAdmin(user),
       canEditDiet: isApproved(user),
@@ -824,11 +842,13 @@ const handlers = {
     if (!cat) return fail('NOT_FOUND', '找不到这只猫')
     const siteId = String(event.siteId || '')
     const cageId = String(event.cageId || '')
-    const assetId = String(event.assetId || '')
+    const parsedAssetIds = eventAssetIds(event)
+    if (parsedAssetIds.error) return fail('INVALID', parsedAssetIds.error)
+    const assetIds = parsedAssetIds.ids
     const status = event.status ? String(event.status) : cat.status
     if (!CAT_STATUS.has(status)) return fail('INVALID', '状态不合法')
     let cage = null
-    let asset = null
+    let selectedAssets = []
     if (siteId) {
       const site = await getById('sites', siteId)
       if (!site || site.enabled === false) return fail('INVALID', '点位不可用')
@@ -841,18 +861,19 @@ const handlers = {
         const other = occupant.data.find((item) => item._id !== cat._id)
         if (other) return fail('OCCUPIED', `${cage.code} 已被 ${other.name} 占用`)
       }
-      if (assetId) {
-        asset = await getById('assets', assetId)
+      const siteCats = assetIds.length ? await getAll('cats', { siteId }) : []
+      for (const assetId of assetIds) {
+        const asset = await getById('assets', assetId)
         if (!asset || asset.siteId !== siteId || asset.enabled === false) {
           return fail('INVALID', '固定资产不属于该点位')
         }
-        const occupant = await db.collection('cats').where({ assetId }).limit(20).get()
-        const others = occupant.data.filter((item) => item._id !== cat._id)
+        const others = siteCats.filter((item) => item._id !== cat._id && catAssetIds(item).includes(assetId))
         if (others.length >= (asset.quantity || 1)) {
           return fail('OCCUPIED', `${asset.name} 占用已满（${asset.quantity || 1}）`)
         }
+        selectedAssets.push(asset)
       }
-    } else if (cageId || assetId) {
+    } else if (cageId || assetIds.length) {
       return fail('INVALID', '未挂点位时不能占用笼子或固定资产')
     }
     const allowed = await canUpdateCat(user)
@@ -863,14 +884,16 @@ const handlers = {
       siteId: cat.siteId || '',
       cageId: cat.cageId || '',
       assetId: cat.assetId || '',
+      assetIds: catAssetIds(cat),
       status: cat.status,
     }
-    const after = { siteId, cageId, assetId, status }
+    const after = { siteId, cageId, assetId: assetIds[0] || '', assetIds, status }
     const occupancyPhotos = photoIds(event)
     quietUpdate('cats', cat._id, {
       siteId,
       cageId,
-      assetId,
+      assetId: assetIds[0] || '',
+      assetIds,
       status,
       updatedAt: new Date(),
       updatedBy: user.openid,
@@ -890,7 +913,7 @@ const handlers = {
       catId: cat._id,
       ...after,
       cageCode: cage ? cage.code : '',
-      assetName: asset ? asset.name : '',
+      assetName: selectedAssets.map((asset) => asset.name).join('、'),
     })
   },
 
@@ -1318,9 +1341,9 @@ const handlers = {
     if (assetId) {
       const asset = await getById('assets', assetId)
       if (!asset) return fail('NOT_FOUND', '固定资产不存在')
-      const used = await db.collection('cats').where({ assetId }).limit(20).get()
-      if (quantity < used.data.length) {
-        return fail('OCCUPIED', `数量不能少于当前占用（${used.data.length}）`)
+      const used = (await getAll('cats')).filter((cat) => catAssetIds(cat).includes(assetId))
+      if (quantity < used.length) {
+        return fail('OCCUPIED', `数量不能少于当前占用（${used.length}）`)
       }
       quietUpdate('assets', assetId, data)
     } else {
@@ -1343,9 +1366,9 @@ const handlers = {
     if (!isAdmin(user)) return fail('FORBIDDEN', '仅管理员可维护固定资产')
     const asset = await getById('assets', event.assetId)
     if (!asset) return fail('NOT_FOUND', '固定资产不存在')
-    const occupants = await db.collection('cats').where({ assetId: asset._id }).limit(20).get()
-    if (occupants.data.length) {
-      return fail('OCCUPIED', `请先取消 ${occupants.data.map((c) => c.name).join('、')} 对该资产的占用再删除`)
+    const occupants = (await getAll('cats')).filter((cat) => catAssetIds(cat).includes(asset._id))
+    if (occupants.length) {
+      return fail('OCCUPIED', `请先取消 ${occupants.map((c) => c.name).join('、')} 对该资产的占用再删除`)
     }
     await db.collection('assets').doc(asset._id).remove()
     await writeLog(user, {
@@ -1388,7 +1411,7 @@ const handlers = {
             category: a.category,
             quantity: a.quantity || 1,
             note: a.note || '',
-            occupiedBy: cats.filter((cat) => cat.assetId === a._id).map((cat) => cat.name).join('、'),
+            occupiedBy: cats.filter((cat) => catAssetIds(cat).includes(a._id)).map((cat) => cat.name).join('、'),
             photoFileIds: assetPhotos[a._id] || a.photoFileIds || [],
           })),
       })),

@@ -13,6 +13,7 @@
       <view class="pill {{campusClass}}">{{campusLabel}}</view>
     </view>
     <view class="tiny mt8">{{dietLabel}}</view>
+    <view class="tiny mt8" wx:if="{{occupancyLabel}}">当前占用：{{occupancyLabel}}</view>
     <view class="pill warn mt8" wx:if="{{cat.provisional}}">身份待核对</view>
     <view class="muted mt8" wx:if="{{observationText}}">最近动态：{{observationText}}（过渡群记录）</view>
     <view class="tiny mt8" wx:if="{{cat.healthStatus === 'healthy' && cat.campusStatus === 'on_campus' && !cat.needsIndividualCare}}">每日执勤或点位记录说明此处已补粮添水；不能据此确认这只猫已经吃到。</view>
@@ -191,8 +192,9 @@
       <view class="chip {{move.cageId === item._id ? 'on' : ''}}" wx:for="{{cageOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickCage">{{item.code}}</view>
     </view>
     <view class="chip-wrap mt12">
-      <view class="chip {{move.assetId === '' ? 'on' : ''}}" data-id="" bindtap="pickAsset">不占资产</view>
-      <view class="chip {{move.assetId === item._id ? 'on' : ''}}" wx:for="{{assetOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickAsset">{{item.name}}</view>
+      <view class="tiny">可同时选择多个资产；点已选资产可取消占用。</view>
+      <view class="chip {{move.assetIds.length === 0 ? 'on' : ''}}" data-id="" bindtap="pickAsset">不占资产</view>
+      <view class="chip {{item.selected ? 'on' : ''}}" wx:for="{{assetOptions}}" wx:key="_id" data-id="{{item._id}}" bindtap="pickAsset">{{item.name}}</view>
     </view>
     <view class="chip-wrap mt12">
       <view class="chip {{move.status === item.id ? 'on' : ''}}" wx:for="{{statusOptions}}" wx:key="id" data-id="{{item.id}}" bindtap="pickMoveStatus">{{item.name}}</view>
@@ -221,3 +223,4 @@
   </view>
 
 </view>
+

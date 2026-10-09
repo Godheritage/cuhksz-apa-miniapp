@@ -1,3 +1,4 @@
+const share = require('../../utils/share.js')
 const changelog = require('../../data/changelog')
 
 function whoText(item) {
@@ -7,6 +8,13 @@ function whoText(item) {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     items: [],
   },

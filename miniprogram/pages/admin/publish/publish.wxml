@@ -1,8 +1,9 @@
 <view class="page" wx:if="{{ready}}">
   <view class="hero">
-    <view class="hero-kicker">仅管理员可见</view>
+    <view class="hero-kicker">已审核成员可发布</view>
     <view class="hero-title">发布任务</view>
     <view class="hero-sub">固定三点的日常投喂请去「每日执勤」；这里发布其他事项，安排时间、人数和地点。</view>
+    <view class="tiny mt8">普通成员发布的任务会自动标记「普通成员发布」，发布后可自行领取。</view>
   </view>
 
   <view class="card">
@@ -54,6 +55,17 @@
     </view>
   </view>
 
-  <view class="btn" bindtap="publishTask">{{submitting ? '发布中…' : '发布任务'}}</view>
+  <view class="card">
+    <view class="card-title">5 · 已经做完了？（可选）</view>
+    <view class="tiny mt8">如果任务已经由你完成，填写完成情况，可附照片；发布时会直接提交给管理员审核。还没做就留空，发布后等人领取，也可以自己领取。</view>
+    <textarea class="textarea mt12" placeholder="已完成才填写：做了什么、结果怎样" value="{{completion.description}}" bindinput="onCompletion" />
+    <view class="btn ghost" bindtap="chooseCompletionPhoto">上传完成照片（可选）</view>
+    <view class="chip-wrap mt8" wx:if="{{completion.photos.length}}">
+      <image class="photo" wx:for="{{completion.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeCompletionPhoto" />
+    </view>
+    <view class="tiny mt8" wx:if="{{completion.photos.length}}">已选 {{completion.photos.length}} 张，长按可删；上传照片时请填写完成情况。</view>
+  </view>
+
+  <view class="btn" bindtap="publishTask">{{submitting ? '提交中…' : (completion.description ? '发布并提交完成情况' : '发布任务')}}</view>
 </view>
 <view class="page" wx:else><view class="card">正在加载发布页面…</view></view>

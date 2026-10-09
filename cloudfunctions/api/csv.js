@@ -9,6 +9,13 @@ function stamp(value) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function catAssetIds(cat) {
+  const raw = Array.isArray(cat && cat.assetIds)
+    ? cat.assetIds
+    : (cat && cat.assetId ? [cat.assetId] : [])
+  return [...new Set(raw.filter(Boolean).map(String))]
+}
+
 function cell(value) {
   let v = value
   if (v == null) return ''
@@ -115,7 +122,7 @@ function buildOrgExport(input, dateKey) {
         category: ASSET[a.category] || a.category,
         quantity: a.quantity || 1,
         note: a.note,
-        occupiedBy: (input.cats || []).filter((c) => c.assetId === a._id).map((c) => c.name).join('、'),
+        occupiedBy: (input.cats || []).filter((c) => catAssetIds(c).includes(a._id)).map((c) => c.name).join('、'),
         photos: a.photoFileIds || [],
       }))),
       rows: (input.assets || []).length,
@@ -152,7 +159,7 @@ function buildOrgExport(input, dateKey) {
         campus: CAMPUS[c.campusStatus] || c.campusStatus || '在校',
         site: siteName[c.siteId] || '',
         cage: ((input.cages || []).find((x) => x._id === c.cageId) || {}).code || '',
-        asset: ((input.assets || []).find((x) => x._id === c.assetId) || {}).name || '',
+        asset: catAssetIds(c).map((id) => ((input.assets || []).find((x) => x._id === id) || {}).name).filter(Boolean).join('、'),
         age: c.ageText,
         gender: GENDER[c.gender] || c.gender,
         breed: c.breed,

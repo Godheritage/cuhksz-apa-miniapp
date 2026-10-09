@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
 const { taskStatusText, taskStatusPill, todayKey } = require('../../../utils/format')
@@ -33,6 +34,13 @@ function calendarDays(monthKey, selectedDate, items) {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
     ready: false,
@@ -41,6 +49,7 @@ Page({
     sites: [],
     siteId: '',
     scopeId: '',
+    mineFilter: '',
     heroSub: HERO[''],
     groups: [],
     loginSlow: false,
@@ -90,6 +99,7 @@ Page({
     return api.call('listWorkTasks', {
       siteId: this.data.siteId || undefined,
       scope: this.data.scopeId || undefined,
+      mineFilter: this.data.mineFilter || undefined,
     }).then((data) => {
       this.setData({
         ready: true,
@@ -187,6 +197,11 @@ Page({
   pickScope(e) {
     const id = e.currentTarget.dataset.id || ''
     this.setData({ scopeId: this.data.scopeId === id ? '' : id }, () => this.reload())
+  },
+
+  pickMineFilter(e) {
+    const id = e.currentTarget.dataset.id || ''
+    this.setData({ mineFilter: id }, () => this.reload())
   },
 
   openTask(e) {

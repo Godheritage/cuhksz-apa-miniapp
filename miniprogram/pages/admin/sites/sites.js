@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const { assetCategoryText } = require('../../../utils/format')
 const photos = require('../../../utils/photos')
@@ -22,6 +23,13 @@ function emptyAsset() {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     assetTypes: ASSET_TYPES,
     sites: [],
@@ -63,13 +71,23 @@ Page({
       form: {
         siteId: site._id,
         name: site.name,
-        publicDesc: site.publicDesc,
+        publicDesc: site.publicDesc || '',
         address: site.address,
         lockNote: site.lockNote,
         type: site.type,
         sort: site.sort,
         confidential: !!site.confidential,
       },
+    }, () => {
+      const query = wx.createSelectorQuery()
+      query.select('#site-form').boundingClientRect()
+      query.selectViewport().scrollOffset()
+      query.exec((rects) => {
+        const rect = rects[0]
+        const viewport = rects[1]
+        if (!rect || !viewport) return
+        wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+      })
     })
   },
 
@@ -158,7 +176,19 @@ Page({
   },
 
   startAsset(e) {
-    this.setData({ assetSiteId: e.currentTarget.dataset.id, assetForm: emptyAsset() })
+    this.setData({ assetSiteId: e.currentTarget.dataset.id, assetForm: emptyAsset() }, () => this.scrollToAssetForm())
+  },
+
+  scrollToAssetForm() {
+    const query = wx.createSelectorQuery()
+    query.select('#asset-form').boundingClientRect()
+    query.selectViewport().scrollOffset()
+    query.exec((rects) => {
+      const rect = rects[0]
+      const viewport = rects[1]
+      if (!rect || !viewport) return
+      wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+    })
   },
 
   editAsset(e) {
@@ -175,7 +205,7 @@ Page({
         note: asset.note || '',
         photos: asset.photoFileIds || [],
       },
-    })
+    }, () => this.scrollToAssetForm())
   },
 
   onAssetField(e) { this.setData({ [`assetForm.${e.currentTarget.dataset.key}`]: e.detail.value }) },

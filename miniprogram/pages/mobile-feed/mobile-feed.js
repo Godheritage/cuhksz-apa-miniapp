@@ -1,3 +1,4 @@
+const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
 const { todayKey, formatTime } = require('../../utils/format')
@@ -34,6 +35,13 @@ function calendarDays(monthKey, selectedDate, logs) {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
     ready: false, monthKey: todayKey().slice(0, 7), selectedDate: todayKey(),

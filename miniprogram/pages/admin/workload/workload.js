@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 
 function todayKey() {
@@ -6,6 +7,13 @@ function todayKey() {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     records: [],
     form: { workerName: '', dateKey: todayKey(), title: '', pf: '' },

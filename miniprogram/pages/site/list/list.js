@@ -1,8 +1,16 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
 const { siteTypeText } = require('../../../utils/format')
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: { ready: false, sites: [] },
 

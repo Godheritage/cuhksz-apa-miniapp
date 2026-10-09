@@ -1,5 +1,6 @@
 const config = require('./config')
 const api = require('./services/api')
+const share = require('./utils/share')
 const { isApproved } = require('./utils/format')
 
 App({
@@ -11,6 +12,9 @@ App({
   },
 
   onLaunch() {
+    if (typeof wx.onCopyUrl === 'function') {
+      wx.onCopyUrl(() => share.copyUrl())
+    }
     if (!config.useMock) {
       if (!wx.cloud) {
         console.error('请使用 2.2.3 及以上基础库以使用云开发')
@@ -22,6 +26,10 @@ App({
       }
     }
     this.refreshUser().catch((err) => console.error('启动登录失败', err))
+  },
+
+  onShow() {
+    if (this.globalData.ready) this.refreshUser(true).catch(() => {})
   },
 
   refreshUser(force) {
@@ -58,10 +66,10 @@ App({
     return pending
   },
 
-  getUser() {
+  getUser(force = false) {
     if (this._refreshing) return this._refreshing
-    if (this.globalData.ready) return Promise.resolve(this.globalData.user)
-    return this.refreshUser()
+    if (this.globalData.ready && !force) return Promise.resolve(this.globalData.user)
+    return this.refreshUser(force)
   },
 
   setUser(user) {

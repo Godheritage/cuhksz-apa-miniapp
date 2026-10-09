@@ -5,19 +5,20 @@
     <view class="hero-sub">在下方逐个点位开启或关闭「每日执勤」。保密地址不对成员直接展示；不要写真实门锁密码。</view>
   </view>
 
-  <view class="card">
-    <view class="card-title">{{form.siteId ? '编辑执勤点' : '新增执勤点'}}</view>
+  <view class="card" id="site-form">
+    <view class="card-title">{{form.siteId ? '编辑执勤点：' + form.name : '新增执勤点'}}</view>
     <input placeholder-class="ph" class="input mt16" placeholder="名称" value="{{form.name}}" bindinput="onField" data-key="name" />
-    <input placeholder-class="ph" class="input mt12" placeholder="公开说明" value="{{form.publicDesc}}" bindinput="onField" data-key="publicDesc" />
+    <view class="field-label mt12">点位备注（最多 80 字）</view>
+    <textarea placeholder-class="ph" class="textarea" placeholder="填写投喂要求、注意事项等" maxlength="80" value="{{form.publicDesc}}" bindinput="onField" data-key="publicDesc" />
     <input placeholder-class="ph" class="input mt12" placeholder="详细地址（可填演示假地址）" value="{{form.address}}" bindinput="onField" data-key="address" />
     <input placeholder-class="ph" class="input mt12" placeholder="到达说明（不要写密码）" value="{{form.lockNote}}" bindinput="onField" data-key="lockNote" />
     <input placeholder-class="ph" class="input mt12" placeholder="类型，管理员自填，如基地、投喂点、教学楼" value="{{form.type}}" bindinput="onField" data-key="type" />
     <view class="chip {{form.confidential ? 'on' : ''}} mt16" bindtap="toggleConfidential">{{form.confidential ? '保密地点（已勾选）' : '勾选为保密地点'}}</view>
-    <view hover-class="btn-hover" class="btn" bindtap="saveSite">保存执勤点</view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveSite">{{form.siteId ? '保存修改' : '保存执勤点'}}</view>
     <view hover-class="btn-hover" class="btn plain" bindtap="resetForm">清空为新增</view>
   </view>
 
-  <view class="card" wx:if="{{assetSiteId}}">
+  <view class="card" id="asset-form" wx:if="{{assetSiteId}}">
     <view class="card-title">{{assetForm.assetId ? '编辑固定资产' : '添加固定资产'}}</view>
     <input placeholder-class="ph" class="input mt16" placeholder="名称，如不锈钢食盆" value="{{assetForm.name}}" bindinput="onAssetField" data-key="name" />
     <input placeholder-class="ph" class="input mt12" placeholder="数量" type="number" value="{{assetForm.quantity}}" bindinput="onAssetField" data-key="quantity" />

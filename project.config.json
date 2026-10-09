@@ -1,8 +1,46 @@
 {
   "miniprogramRoot": "miniprogram/",
   "cloudfunctionRoot": "cloudfunctions/",
+  "srcMiniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
-  "appid": "touristappid",
-  "projectname": "animal-care-miniapp",
-  "libVersion": "3.8.0"
+  "appid": "wx8ac912dded26ff5e",
+  "projectname": "cuhksz-apa-duty",
+  "description": "港中深校园动保 · 日常执勤记录",
+  "libVersion": "3.8.0",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "coverView": true,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true,
+    "showShadowRootInConverter": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "compileWorklet": false,
+    "uploadWithSourceMap": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true,
+    "uglifyFileName": false
+  },
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  },
+  "simulatorPluginLibVersion": {},
+  "condition": {}
 }

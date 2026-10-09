@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const photos = require('../../../utils/photos')
 
@@ -8,6 +9,13 @@ const WEEKDAYS = [
 ]
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     ready: false,
     submitting: false,
@@ -17,13 +25,14 @@ Page({
       siteId: '', scope: 'once', weekdays: [], allowMultiple: false,
       maxParticipants: '2', deadlineDateKey: '', title: '', content: '', photos: [],
     },
+    completion: { description: '', photos: [] },
   },
 
   onShow() {
-    getApp().ensureAdmin().then(() => api.call('listWorkTasks')).then((data) => {
+    getApp().ensureApproved().then(() => api.call('listWorkTasks')).then((data) => {
       this.setData({ ready: true, sites: data.sites || [] })
     }).catch((err) => {
-      if (err.message !== 'UNAPPROVED' && err.message !== 'NOT_ADMIN') {
+      if (err.message !== 'UNAPPROVED') {
         wx.showToast({ title: photos.failText(err), icon: 'none' })
       }
     })
@@ -76,6 +85,18 @@ Page({
     this.setData({ 'publish.photos': photos.removeAt(this.data.publish.photos, e.currentTarget.dataset.index) })
   },
 
+  onCompletion(e) {
+    this.setData({ 'completion.description': e.detail.value })
+  },
+
+  chooseCompletionPhoto() {
+    photos.pick(this.data.completion.photos, 6).then((next) => this.setData({ 'completion.photos': next }))
+  },
+
+  removeCompletionPhoto(e) {
+    this.setData({ 'completion.photos': photos.removeAt(this.data.completion.photos, e.currentTarget.dataset.index) })
+  },
+
   publishTask() {
     if (this.data.submitting) return
     const form = this.data.publish
@@ -92,17 +113,24 @@ Page({
       wx.showToast({ title: '人数上限填 2–50', icon: 'none' })
       return
     }
+    const completion = this.data.completion
+    const completionDescription = String(completion.description || '').trim()
+    if (completion.photos.length && !completionDescription) {
+      wx.showToast({ title: '有完成照片时请填写完成情况', icon: 'none' })
+      return
+    }
     this.setData({ submitting: true })
-    photos.uploadMany(form.photos, 'task')
-      .then((photoFileIds) => api.call('adminPublishWorkTask', {
+    Promise.all([photos.uploadMany(form.photos, 'task'), photos.uploadMany(completion.photos, 'task')])
+      .then(([photoFileIds, completionPhotoFileIds]) => api.call('adminPublishWorkTask', {
         siteId: form.siteId, scope: form.scope, weekdays: form.weekdays,
         allowMultiple: form.allowMultiple, maxParticipants,
         deadlineDateKey: form.deadlineDateKey,
         title: form.title, content: form.content, photoFileIds,
+        completionDescription, completionPhotoFileIds,
       }))
       .then(() => {
         this.setData({ submitting: false })
-        wx.showToast({ title: '已发布', icon: 'success' })
+        wx.showToast({ title: completionDescription ? '已发布并提交审核' : '已发布', icon: 'none' })
         wx.switchTab({ url: '/pages/duty/list/list' })
       })
       .catch((err) => {

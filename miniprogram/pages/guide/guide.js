@@ -1,6 +1,14 @@
+const share = require('../../utils/share.js')
 const { forRole } = require('../../data/guide')
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   data: {
     ready: false,
     error: '',

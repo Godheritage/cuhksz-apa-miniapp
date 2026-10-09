@@ -1,10 +1,1 @@
-module.exports = {
-  "key": "roster922",
-  "label": "示例排班",
-  "through": "",
-  "duty": [],
-  "feed": [],
-  "credits": [],
-  "insurance": [],
-  "feedRule": "请按现场安排填写。"
-}
+module.exports = {"key":"roster922","label":"本地演示排班","through":"2026-09-22","duty":[{"dateKey":"2026-09-22","shift":"早班","place":"豪宅","names":["演示成员"],"note":""}],"feed":[{"dateKey":"2026-09-22","slot":"上午","place":"TA","names":["演示成员"],"note":"","placeNote":""}],"credits":[{"key":"demo:work:1","dateKey":"2026-09-22","workerName":"演示成员","title":"演示清洗食盆"}],"insurance":[{"name":"好大声","birthday":"","insuredOn":"","payer":"演示付款人"},{"name":"演示新猫","birthday":"","insuredOn":"","payer":"演示付款人"}],"feedRule":"演示数据，不代表真实排班。"}

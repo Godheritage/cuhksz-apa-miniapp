@@ -1,3 +1,4 @@
+const share = require('../../../utils/share.js')
 const photos = require('../../../utils/photos')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
@@ -16,6 +17,35 @@ const ADOPT_STATUS_OPTIONS = [
 
 function emptyAdopt() {
   return { candidateId: '', name: '', status: 'contacting', note: '', photos: [] }
+}
+
+function uniqueAssetIds(value) {
+  return [...new Set((Array.isArray(value) ? value : []).filter(Boolean).map(String))]
+}
+
+function assetIdsFrom(value) {
+  if (value && Array.isArray(value.assetIds)) return uniqueAssetIds(value.assetIds)
+  if (value && value.assetId) return uniqueAssetIds([value.assetId])
+  return []
+}
+
+function markAssetOptions(options, selectedIds) {
+  const selected = new Set(selectedIds)
+  return (options || []).map((item) => ({
+    ...item,
+    selected: selected.has(String(item._id)),
+  }))
+}
+
+function moveWithAssets(move, fallback) {
+  const next = { ...(fallback || {}), ...(move || {}) }
+  const assetIds = assetIdsFrom(move || fallback)
+  return { ...next, assetIds, assetId: assetIds[0] || '' }
+}
+
+function assetRows(data) {
+  if (data && Array.isArray(data.assets)) return data.assets
+  return data && data.asset ? [data.asset] : []
 }
 
 const STATUS_OPTIONS = [
@@ -42,6 +72,13 @@ const HEALTH_OPTIONS = [
 ]
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
     ready: false,
@@ -63,7 +100,7 @@ Page({
     recentDuty: [],
     plans: [],
     edit: { name: '', notes: '', ageText: '', breed: '', gender: 'unknown', healthStatus: 'unknown', campusStatus: 'on_campus', photos: [] },
-    move: { siteId: '', cageId: '', assetId: '', status: 'in_care', photos: [] },
+    move: { siteId: '', cageId: '', assetIds: [], assetId: '', status: 'in_care', photos: [] },
     diet: { ate: true, drank: true, note: '', photos: [] },
     dietLabel: '',
     feedLogs: [],
@@ -108,11 +145,13 @@ Page({
       api.call('listCarePlans', { catId: this.catId }).catch(() => ({ plans: [] })),
     ]).then(([data, planData]) => {
       const cat = data.cat
+      const assetIds = assetIdsFrom(cat)
+      const occupancyAssets = assetRows(data)
       this.setData({
         ready: true,
         cat,
         siteName: (data.site && data.site.name) || '未挂执勤点',
-        occupancyLabel: [data.cage ? `笼 ${data.cage.code}` : '', data.asset ? data.asset.name : ''].filter(Boolean).join(' · ') || '未占用资源',
+        occupancyLabel: [data.cage ? `笼 ${data.cage.code}` : '', occupancyAssets.map((asset) => asset.name).join('、')].filter(Boolean).join(' · ') || '未占用资源',
         housingLabel: cat.housingLabel || '',
         campusLabel: campusText(cat.campusStatus),
         campusClass: campusPill(cat.campusStatus),
@@ -141,7 +180,7 @@ Page({
         },
         siteOptions: data.siteOptions || [],
         cageOptions: data.cageOptions || [],
-        assetOptions: data.assetOptions || [],
+        assetOptions: markAssetOptions(data.assetOptions, assetIds),
         recentDuty: (data.recentDuty || []).map((item) => ({
           ...item,
           timeText: formatTime(item.arrivedAt),
@@ -173,9 +212,10 @@ Page({
         move: {
           siteId: cat.siteId || '',
           cageId: cat.cageId || '',
-          assetId: cat.assetId || '',
+          assetIds,
+          assetId: assetIds[0] || '',
           status: cat.status,
-          photos: (data.cage && data.cage.photoFileIds) || (data.asset && data.asset.photoFileIds) || [],
+          photos: (data.cage && data.cage.photoFileIds) || (occupancyAssets[0] && occupancyAssets[0].photoFileIds) || [],
         },
         diet: {
           ate: true,
@@ -193,9 +233,12 @@ Page({
       })
       const draft = readDraft(this.draftKey)
       if (draft) {
+        const draftAssetIds = draft.move ? assetIdsFrom(draft.move) : this.data.move.assetIds
+        const nextMove = draft.move ? moveWithAssets(draft.move, this.data.move) : this.data.move
         this.setData({
           edit: draft.edit || this.data.edit,
-          move: draft.move || this.data.move,
+          move: nextMove,
+          assetOptions: markAssetOptions(this.data.assetOptions, draftAssetIds),
           diet: draft.diet || this.data.diet,
           hosp: draft.hosp || this.data.hosp,
           planForm: draft.planForm || this.data.planForm,
@@ -214,7 +257,18 @@ Page({
   pickEdit(e) { this.setData({ [`edit.${e.currentTarget.dataset.field}`]: e.currentTarget.dataset.id }) },
   pickMoveStatus(e) { this.setData({ 'move.status': e.currentTarget.dataset.id }) },
   pickCage(e) { this.setData({ 'move.cageId': e.currentTarget.dataset.id || '' }) },
-  pickAsset(e) { this.setData({ 'move.assetId': e.currentTarget.dataset.id || '' }) },
+  pickAsset(e) {
+    const assetId = String(e.currentTarget.dataset.id || '')
+    const current = assetIdsFrom(this.data.move)
+    const assetIds = assetId
+      ? (current.includes(assetId) ? current.filter((id) => id !== assetId) : current.concat(assetId))
+      : []
+    this.setData({
+      'move.assetIds': assetIds,
+      'move.assetId': assetIds[0] || '',
+      assetOptions: markAssetOptions(this.data.assetOptions, assetIds),
+    })
+  },
   toggleDiet(e) { this.setData({ [`diet.${e.currentTarget.dataset.key}`]: !this.data.diet[e.currentTarget.dataset.key] }) },
   onAdopt(e) { this.setData({ [`adoptForm.${e.currentTarget.dataset.key}`]: e.detail.value }) },
   pickAdoptStatus(e) { this.setData({ 'adoptForm.status': e.currentTarget.dataset.id }) },
@@ -278,16 +332,31 @@ Page({
 
   pickMoveSite(e) {
     const siteId = e.currentTarget.dataset.id || ''
-    this.setData({ 'move.siteId': siteId, 'move.cageId': '', 'move.assetId': '' })
-    if (!siteId) {
-      this.setData({ cageOptions: [], assetOptions: [] })
-      return
-    }
+    const requestId = (this._assetRequestId || 0) + 1
+    this._assetRequestId = requestId
+    this.setData({
+      'move.siteId': siteId,
+      'move.cageId': '',
+      'move.assetIds': [],
+      'move.assetId': '',
+      cageOptions: [],
+      assetOptions: [],
+    })
+    if (!siteId) return
     Promise.all([
       api.call('listCages', { siteId }),
       api.call('listAssets', { siteId }),
-    ]).then(([c, a]) => this.setData({ cageOptions: c.cages || [], assetOptions: a.assets || [] }))
-      .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
+    ]).then(([c, a]) => {
+      if (requestId !== this._assetRequestId || this.data.move.siteId !== siteId) return
+      this.setData({
+        cageOptions: c.cages || [],
+        assetOptions: markAssetOptions(a.assets || [], []),
+      })
+    })
+      .catch((err) => {
+        if (requestId !== this._assetRequestId) return
+        wx.showToast({ title: err.message, icon: 'none' })
+      })
   },
 
   chooseCatPhoto() {
@@ -329,8 +398,15 @@ Page({
   },
 
   saveLocation() {
-    photos.uploadMany(this.data.move.photos, 'occupancy')
-      .then((photoFileIds) => api.call('updateCatLocation', { catId: this.catId, ...this.data.move, photoFileIds }))
+    const move = moveWithAssets(this.data.move)
+    photos.uploadMany(move.photos, 'occupancy')
+      .then((photoFileIds) => api.call('updateCatLocation', {
+        catId: this.catId,
+        ...move,
+        assetIds: move.assetIds,
+        assetId: move.assetId,
+        photoFileIds,
+      }))
       .then(() => { this.clearCatDraft(); wx.showToast({ title: '位置已更新', icon: 'success' }); this.reload() })
       .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
   },
@@ -433,3 +509,9 @@ Page({
       .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
   },
 })
+
+
+
+
+
+

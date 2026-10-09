@@ -1,3 +1,4 @@
+const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
 const photos = require('../../utils/photos')
@@ -12,7 +13,7 @@ function monthShift(monthKey, amount) {
   return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`
 }
 
-function calendarDays(monthKey, selectedDate, logs) {
+function calendarDays(monthKey, selectedDate, logs, signups) {
   const [year, month] = monthKey.split('-').map(Number)
   const offset = (new Date(year, month - 1, 1).getDay() + 6) % 7
   const count = new Date(year, month, 0).getDate()
@@ -21,27 +22,35 @@ function calendarDays(monthKey, selectedDate, logs) {
     if (!slots[row.dateKey]) slots[row.dateKey] = new Set()
     slots[row.dateKey].add(row.siteId + ':' + row.shiftId)
   })
+  const signupCounts = {}
+  ;(signups || []).forEach((row) => { signupCounts[row.dateKey] = (signupCounts[row.dateKey] || 0) + 1 })
   const cells = []
   for (let i = 0; i < offset; i += 1) cells.push({ key: 'blank-' + i, blank: true })
   for (let day = 1; day <= count; day += 1) {
     const key = `${monthKey}-${String(day).padStart(2, '0')}`
-    cells.push({ key, day, selected: key === selectedDate, count: slots[key]?.size || 0 })
+    cells.push({ key, day, selected: key === selectedDate, count: slots[key]?.size || 0,
+      signupCount: signupCounts[key] || 0 })
   }
   return cells
 }
 
-function dayCards(sites, archivedSites, shifts, logs, dateKey) {
+function dayCards(sites, archivedSites, shifts, logs, signups, dateKey) {
   const current = (sites || []).map((site) => ({ ...site, archived: false }))
-  const history = (archivedSites || []).filter((site) => (logs || [])
+  const history = (archivedSites || []).filter((site) => (logs || []).concat(signups || [])
     .some((row) => row.dateKey === dateKey && row.siteId === site._id))
   return current.concat(history).map((site) => ({
     ...site,
     shifts: (shifts || []).map((shift) => {
       const rows = (logs || []).filter((row) => row.dateKey === dateKey
         && row.siteId === site._id && row.shiftId === shift.id)
+      const planned = (signups || []).filter((row) => row.dateKey === dateKey
+        && row.siteId === site._id && row.shiftId === shift.id)
       return {
         ...shift, siteId: site._id, siteName: site.name,
         logs: rows, done: rows.length > 0, count: rows.length,
+        signups: planned, signupCount: planned.length,
+        signupNames: planned.map((row) => row.byName).filter(Boolean).join('、'),
+        signedByMe: planned.some((row) => row.mine),
         mine: rows.some((row) => row.mine),
         people: rows.map((row) => row.byName).filter(Boolean).join('、'),
       }
@@ -50,16 +59,24 @@ function dayCards(sites, archivedSites, shifts, logs, dateKey) {
 }
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: {
-    ready: false, monthKey: todayKey().slice(0, 7), selectedDate: todayKey(),
-    week: WEEK, days: [], sites: [], archivedSites: [], shifts: [], logs: [], cards: [],
+    ready: false, todayKey: todayKey(), monthKey: todayKey().slice(0, 7), selectedDate: todayKey(),
+    week: WEEK, days: [], sites: [], archivedSites: [], shifts: [], logs: [], signups: [], cards: [],
     doneSlots: 0, totalSlots: 0, siteNames: '',
     selectedSlot: {}, form: emptyForm(), saving: false,
     pendingMembers: 0,
   },
 
   onShow() {
+    this.setData({ todayKey: todayKey() })
     const tabBar = this.getTabBar && this.getTabBar()
     if (tabBar) tabBar.setData({ selected: 0, pendingCount: getApp().globalData.pendingMemberCount || 0 })
     this.bindApprovedUser((user) => {
@@ -95,13 +112,14 @@ Page({
       const archivedSites = data.archivedSites || []
       const shifts = data.shifts || []
       const logs = (data.logs || []).map((row) => ({ ...row, timeText: formatTime(row.at) }))
-      const cards = dayCards(sites, archivedSites, shifts, logs, this.data.selectedDate)
+      const signups = data.signups || []
+      const cards = dayCards(sites, archivedSites, shifts, logs, signups, this.data.selectedDate)
       this.setData({
-        ready: true, sites, archivedSites, shifts, logs, cards,
+        ready: true, sites, archivedSites, shifts, logs, signups, cards,
         siteNames: sites.map((site) => site.name).join('、'),
         totalSlots: sites.length * shifts.length,
         doneSlots: cards.reduce((sum, site) => sum + site.shifts.filter((shift) => shift.done).length, 0),
-        days: calendarDays(monthKey, this.data.selectedDate, logs),
+        days: calendarDays(monthKey, this.data.selectedDate, logs, signups),
       })
     }).catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
   },
@@ -116,11 +134,12 @@ Page({
   pickDay(e) {
     const selectedDate = e.currentTarget.dataset.date
     if (!selectedDate) return
-    const cards = dayCards(this.data.sites, this.data.archivedSites, this.data.shifts, this.data.logs, selectedDate)
+    const cards = dayCards(this.data.sites, this.data.archivedSites, this.data.shifts,
+      this.data.logs, this.data.signups, selectedDate)
     this.setData({
       selectedDate, cards, selectedSlot: {}, form: emptyForm(),
       doneSlots: cards.reduce((sum, site) => sum + site.shifts.filter((shift) => shift.done).length, 0),
-      days: calendarDays(this.data.monthKey, selectedDate, this.data.logs),
+      days: calendarDays(this.data.monthKey, selectedDate, this.data.logs, this.data.signups),
     })
   },
   pickSlot(e) {
@@ -190,6 +209,17 @@ Page({
       api.call('deleteRoutineDuty', { checkinId }).then(() => this.reload())
         .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
     } })
+  },
+  signup(e) {
+    const { siteId, shiftId } = e.currentTarget.dataset
+    api.call('signupRoutineDuty', { dateKey: this.data.selectedDate, siteId, shiftId })
+      .then(() => { wx.showToast({ title: '已报名', icon: 'success' }); return this.reload() })
+      .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
+  },
+  cancelSignup(e) {
+    api.call('cancelRoutineDutySignup', { signupId: e.currentTarget.dataset.id })
+      .then(() => this.reload())
+      .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
   },
   openSiteDetail(e) { wx.navigateTo({ url: `/pages/site/detail/detail?id=${e.currentTarget.dataset.id}` }) },
   goReviewMembers() { wx.navigateTo({ url: '/pages/admin/members/members' }) },

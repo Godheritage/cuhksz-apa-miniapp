@@ -1,8 +1,16 @@
+const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
 const { formatTime, statusText, statusPill, assetCategoryText } = require('../../../utils/format')
 
 Page({
+  onShareAppMessage() {
+    return share.appMessage()
+  },
+
+  onShareTimeline() {
+    return share.timeline()
+  },
   behaviors: [auth],
   data: { ready: false, site: {}, dateKey: '', onDuty: false, records: [], cages: [], assets: [], cats: [] },
   onLoad(query) {
