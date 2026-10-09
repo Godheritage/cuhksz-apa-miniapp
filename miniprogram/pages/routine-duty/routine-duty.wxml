@@ -71,7 +71,10 @@
             <view class="tiny">{{log.fed ? '已投喂' : '未勾投喂'}} · {{log.watered ? '已添水' : '未勾添水'}}</view>
             <view class="tiny" wx:if="{{log.note}}">{{log.note}}</view>
           </view>
-          <view class="btn mini plain" wx:if="{{log.canDelete}}" data-id="{{log._id}}" bindtap="deleteCheckin">删除</view>
+          <view class="row-actions">
+            <view class="btn mini plain" wx:if="{{log.canEdit}}" data-id="{{log._id}}" bindtap="editCheckin">编辑</view>
+            <view class="btn mini plain" wx:if="{{log.canDelete}}" data-id="{{log._id}}" bindtap="deleteCheckin">删除</view>
+          </view>
         </view>
         <view class="photo-row mt8" wx:if="{{log.photoUrls.length}}">
           <image class="photo" wx:for="{{log.photoUrls}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{log.photoUrls}}" bindtap="previewPhoto" />
@@ -82,10 +85,10 @@
 
   <view class="card" wx:if="{{selectedSlot.siteId}}" id="checkin-form">
     <view class="row">
-      <view class="card-title">{{selectedSlot.siteName}} · {{selectedSlot.shiftName}}打卡</view>
+      <view class="card-title">{{selectedSlot.siteName}} · {{selectedSlot.shiftName}}{{selectedSlot.checkinId ? ' · 编辑打卡' : '打卡'}}</view>
       <view class="chip" bindtap="closeForm">取消</view>
     </view>
-    <view class="tiny mt8">{{selectedDate}} · 实际提交时间会自动记录</view>
+    <view class="tiny mt8">{{selectedDate}} · {{selectedSlot.checkinId ? '修改保留原打卡日期和时间' : '实际提交时间会自动记录'}}</view>
     <view class="chip-wrap mt12">
       <view class="chip {{form.fed ? 'on' : ''}}" data-key="fed" bindtap="toggleFlag">{{form.fed ? '已投喂' : '投喂'}}</view>
       <view class="chip {{form.watered ? 'on' : ''}}" data-key="watered" bindtap="toggleFlag">{{form.watered ? '已添水' : '添水'}}</view>
@@ -98,7 +101,7 @@
         <view class="tiny remove-photo" data-index="{{index}}" bindtap="removePhoto">移除</view>
       </view>
     </view>
-    <view class="btn" bindtap="save">{{saving ? '提交中…' : '确认打卡'}}</view>
+    <view class="btn" bindtap="save">{{saving ? '保存中…' : (selectedSlot.checkinId ? '保存修改' : '确认打卡')}}</view>
   </view>
 </view>
 <view class="page has-tab" wx:else><view class="card">正在加载每日执勤…</view></view>

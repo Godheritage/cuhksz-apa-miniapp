@@ -58,7 +58,8 @@
           <view>{{task.title}}</view>
           <view class="tiny" wx:if="{{task.publisherTag}}">{{task.publisherTag}} · {{task.createdByName}}</view>
           <view class="tiny">{{task.scopeShort}} · {{task.scopeHint}}</view>
-          <view class="tiny" wx:if="{{task.status === 'claimed'}}">由 {{task.claimedByName}} 领取</view>
+          <view class="tiny" wx:if="{{task.status === 'claimed' && !task.allowMultiple}}">由 {{task.claimedByName}} 领取</view>
+          <view class="tiny" wx:if="{{task.allowMultiple}}">多人任务 · 任意一人回传审核通过即完成</view>
           <view class="tiny" wx:if="{{task.allowMultiple && task.participantNames}}">参与：{{task.participantNames}}</view>
         </view>
         <view>

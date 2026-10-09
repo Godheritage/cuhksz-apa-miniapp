@@ -41,6 +41,19 @@ function taskCycleKey(task, todayKey) {
   return scope === 'daily' || scope === 'weekly' ? todayKey : 'all'
 }
 
+function participantCycleKey(task, participant) {
+  return normalizeScope(task) === 'once' ? 'all' : (participant.cycleKey || participant.dateKey || '')
+}
+
+function multiCycleDone(task, cycle) {
+  if ((task.participants || []).some((p) => participantCycleKey(task, p) === cycle && p.status === 'done')) return true
+  return task.status === 'done' && (cycle === 'all' || task.lastDoneDateKey === cycle)
+}
+
+function participantLimit(value) {
+  return value == null || String(value).trim() === '' ? 50 : Number(value)
+}
+
 function shanghaiDayStartMs(dateKey) {
   const parts = String(dateKey || '').split('-').map(Number)
   if (parts.length < 3 || parts.some((n) => Number.isNaN(n))) return 0
@@ -64,6 +77,16 @@ function applyScopeView(task, todayKey) {
   if ((scope === 'daily' || scope === 'weekly') && status === 'claimed' && task.claimedDateKey && task.claimedDateKey < todayKey) {
     status = 'open'
     cycleReset = true
+  }
+  if (task && task.allowMultiple) {
+    const cycle = taskCycleKey(task, todayKey)
+    const participants = (task.participants || []).filter((p) => participantCycleKey(task, p) === cycle)
+    const completed = participants.find((p) => p.status === 'done')
+    status = multiCycleDone(task, cycle) ? 'done'
+      : participants.some((p) => p.status === 'review') ? 'review'
+        : participants.some((p) => p.status === 'claimed') ? 'claimed' : 'open'
+    report = completed ? completed.report : null
+    cycleReset = cycleReset || (scope !== 'once' && !!lastDoneDateKey && lastDoneDateKey < todayKey)
   }
   const submittedLate = !!(report && report.submittedLate)
   const overdue = !!(scope === 'once' && deadlineDateKey && deadlineDateKey < todayKey && status !== 'done')
@@ -117,6 +140,9 @@ module.exports = {
   parseWeekdays,
   isDueToday,
   taskCycleKey,
+  participantCycleKey,
+  multiCycleDone,
+  participantLimit,
   shanghaiDayStartMs,
   applyScopeView,
   filterOverlaysForScope,

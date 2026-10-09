@@ -77,8 +77,12 @@
     </view>
   </view>
 
-  <view class="card" wx:if="{{canEditDiet}}">
-    <view class="card-title">单猫特殊照料记录</view>
+  <view class="card" wx:if="{{canEditDiet}}" id="cat-feed-form">
+    <view class="row">
+      <view class="card-title">{{diet.logId ? '编辑照料记录' : '单猫特殊照料记录'}}</view>
+      <view class="chip" wx:if="{{diet.logId}}" bindtap="cancelDietEdit">取消编辑</view>
+    </view>
+    <view class="tiny mt8" wx:if="{{diet.logId}}">{{diet.dateKey}} · 修改保留原打卡日期和时间。</view>
     <view class="tiny">{{cat.needsIndividualCare ? '这只猫已标记为需要单独追踪。' : '只有需要单独追踪时在这里记；健康猫日常补粮添水记在固定点位的每日执勤或其他所属点位。'}}</view>
     <view class="chip-wrap mt12">
       <view class="chip {{diet.ate ? 'on' : ''}}" data-key="ate" bindtap="toggleDiet">{{diet.ate ? '已喂食' : '未喂食'}}</view>
@@ -101,7 +105,7 @@
       />
     </view>
     <view class="tiny" wx:if="{{diet.photos.length}}">已选 {{diet.photos.length}} 张，长按可删</view>
-    <view hover-class="btn-hover" class="btn" bindtap="saveDiet">记下这次投喂</view>
+    <view hover-class="btn-hover" class="btn" bindtap="saveDiet">{{savingDiet ? '保存中…' : (diet.logId ? '保存修改' : '记下这次投喂')}}</view>
   </view>
 
   <view class="card" wx:if="{{feedLogs.length}}">
@@ -113,7 +117,10 @@
           <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
           <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
         </view>
-        <view hover-class="btn-hover" class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteFeed">删除</view>
+        <view class="row-actions">
+          <view hover-class="btn-hover" class="btn mini plain" wx:if="{{item.canEdit}}" data-id="{{item._id}}" bindtap="editFeed">编辑</view>
+          <view hover-class="btn-hover" class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteFeed">删除</view>
+        </view>
       </view>
       <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
         <image

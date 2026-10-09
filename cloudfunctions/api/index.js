@@ -495,6 +495,8 @@ async function listFeedLogs(catId, user) {
     byOpenid: log.byOpenid || '',
     dateKey: log.dateKey || '',
     at: log.at || 0,
+    updatedAt: log.updatedAt || 0,
+    canEdit: log.byOpenid === user.openid,
     canDelete: isAdmin(user) || log.byOpenid === user.openid,
   }))
 }
@@ -981,6 +983,39 @@ const handlers = {
 
   async addFeedLog(event, user) {
     return createFeedLog(event, user)
+  },
+
+  async updateFeedLog(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('INVALID', '照片列表不合法')
+    const result = await db.runTransaction(async (tx) => {
+      const ref = tx.collection('diet_logs').doc(event.logId)
+      const log = (await ref.get()).data
+      if (!log) return fail('NOT_FOUND', '找不到这条投喂记录')
+      if (!user.openid || log.byOpenid !== user.openid) return fail('FORBIDDEN', '只能编辑自己写的投喂记录')
+      const fed = event.fed == null ? !!(log.fed != null ? log.fed : log.ate) : !!event.fed
+      const watered = event.watered == null ? !!(log.watered != null ? log.watered : log.drank) : !!event.watered
+      if (!fed && !watered) return fail('INVALID', '请至少勾选喂食或喂水')
+      const patch = {
+        fed, watered, ate: fed, drank: watered,
+        note: event.note == null ? (log.note || '') : String(event.note).trim().slice(0, 80),
+        photoFileIds: event.photoFileIds == null ? (log.photoFileIds || [])
+          : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 6),
+        updatedAt: Date.now(),
+      }
+      const catRef = tx.collection('cats').doc(log.catId)
+      const cat = (await catRef.get()).data
+      await ref.update({ data: patch })
+      if (cat && cat.lastDiet && cat.lastDiet.at === log.at) {
+        const lastDiet = { ...cat.lastDiet, fed, watered, ate: fed, drank: watered, note: patch.note }
+        await catRef.update({ data: { lastDiet: _.set(lastDiet), updatedAt: patch.updatedAt } })
+      }
+      return ok({ logId: log._id, catId: log.catId, updatedAt: patch.updatedAt })
+    })
+    if (!result.ok) return result
+    const logs = await listFeedLogs(result.data.catId, user)
+    return ok({ ...result.data, lastDiet: lastDietFromLogs(logs, shanghaiDateKey()),
+      careTimesToday: logs.filter((item) => item.dateKey === shanghaiDateKey()).length })
   },
 
   async deleteFeedLog(event, user) {

@@ -127,11 +127,13 @@ Page({
   prevMonth() { this.changeMonth(-1) },
   nextMonth() { this.changeMonth(1) },
   changeMonth(amount) {
+    if (this.data.saving) return
     const monthKey = monthShift(this.data.monthKey, amount)
-    this.setData({ monthKey, selectedDate: monthKey + '-01', selectedSlot: {}, ready: false })
+    this.setData({ monthKey, selectedDate: monthKey + '-01', selectedSlot: {}, form: emptyForm(), ready: false })
     this.reload()
   },
   pickDay(e) {
+    if (this.data.saving) return
     const selectedDate = e.currentTarget.dataset.date
     if (!selectedDate) return
     const cards = dayCards(this.data.sites, this.data.archivedSites, this.data.shifts,
@@ -143,13 +145,15 @@ Page({
     })
   },
   pickSlot(e) {
+    if (this.data.saving) return
     const { siteId, shiftId } = e.currentTarget.dataset
     const site = this.data.cards.find((item) => item._id === siteId)
     const shift = site && site.shifts.find((item) => item.id === shiftId)
     if (!shift) return
     if (site.archived) return
     if (shift.mine) {
-      wx.showToast({ title: '你已打过这一班', icon: 'none' })
+      const log = shift.logs.find((row) => row.canEdit)
+      if (log) this.editCheckin({ currentTarget: { dataset: { id: log._id } } })
       return
     }
     if (this.data.selectedDate > todayKey()) {
@@ -159,9 +163,36 @@ Page({
     this.setData({
       selectedSlot: { siteId, siteName: site.name, shiftId, shiftName: shift.name },
       form: emptyForm(),
-    }, () => wx.pageScrollTo({ scrollTop: 10000, duration: 250 }))
+    }, () => this.scrollToCheckinForm())
   },
-  closeForm() { this.setData({ selectedSlot: {}, form: emptyForm() }) },
+  editCheckin(e) {
+    if (this.data.saving) return
+    const log = this.data.logs.find((row) => row._id === e.currentTarget.dataset.id)
+    if (!log || !log.canEdit) return
+    const site = this.data.cards.find((row) => row._id === log.siteId)
+    const shift = this.data.shifts.find((row) => row.id === log.shiftId)
+    this.setData({
+      selectedSlot: {
+        checkinId: log._id, siteId: log.siteId, siteName: (site && site.name) || log.siteName,
+        shiftId: log.shiftId, shiftName: (shift && shift.name) || log.shiftId,
+      },
+      form: { fed: !!log.fed, watered: !!log.watered, note: log.note || '', photos: (log.photoFileIds || []).slice() },
+    }, () => this.scrollToCheckinForm())
+  },
+  scrollToCheckinForm() {
+    const query = wx.createSelectorQuery()
+    query.select('#checkin-form').boundingClientRect()
+    query.selectViewport().scrollOffset()
+    query.exec((rects) => {
+      const rect = rects[0]
+      const viewport = rects[1]
+      if (rect && viewport) wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+    })
+  },
+  closeForm() {
+    if (this.data.saving) return
+    this.setData({ selectedSlot: {}, form: emptyForm() })
+  },
   toggleFlag(e) {
     const key = e.currentTarget.dataset.key
     this.setData({ [`form.${key}`]: !this.data.form[key] })
@@ -186,16 +217,17 @@ Page({
   },
   save() {
     if (this.data.saving || !this.data.selectedSlot.siteId) return
-    const slot = this.data.selectedSlot
-    const form = this.data.form
+    const slot = { ...this.data.selectedSlot }
+    const form = { ...this.data.form, photos: (this.data.form.photos || []).slice() }
+    const dateKey = this.data.selectedDate
     this.setData({ saving: true })
-    Promise.all((form.photos || []).map((filePath) => api.uploadDutyPhoto(filePath, 'routine-duty')))
-      .then((photoFileIds) => api.call('submitRoutineDuty', {
-        dateKey: this.data.selectedDate, siteId: slot.siteId, shiftId: slot.shiftId,
+    photos.uploadMany(form.photos, 'routine-duty')
+      .then((photoFileIds) => api.call(slot.checkinId ? 'updateRoutineDuty' : 'submitRoutineDuty', {
+        ...(slot.checkinId ? { checkinId: slot.checkinId } : { dateKey, siteId: slot.siteId, shiftId: slot.shiftId }),
         fed: form.fed, watered: form.watered, note: form.note, photoFileIds,
       }))
       .then(() => {
-        wx.showToast({ title: '已打卡', icon: 'success' })
+        wx.showToast({ title: slot.checkinId ? '已保存修改' : '已打卡', icon: 'success' })
         this.setData({ selectedSlot: {}, form: emptyForm() })
         return this.reload()
       })
@@ -203,10 +235,14 @@ Page({
       .then(() => this.setData({ saving: false }))
   },
   deleteCheckin(e) {
+    if (this.data.saving) return
     const checkinId = e.currentTarget.dataset.id
     wx.showModal({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
       if (!result.confirm) return
-      api.call('deleteRoutineDuty', { checkinId }).then(() => this.reload())
+      api.call('deleteRoutineDuty', { checkinId }).then(() => {
+        if (this.data.selectedSlot.checkinId === checkinId) this.closeForm()
+        return this.reload()
+      })
         .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
     } })
   },

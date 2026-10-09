@@ -23,7 +23,7 @@ Page({
     weekdays: WEEKDAYS,
     publish: {
       siteId: '', scope: 'once', weekdays: [], allowMultiple: false,
-      maxParticipants: '2', deadlineDateKey: '', title: '', content: '', photos: [],
+      maxParticipants: '50', deadlineDateKey: '', title: '', content: '', photos: [],
     },
     completion: { description: '', photos: [] },
   },
@@ -108,7 +108,7 @@ Page({
       wx.showToast({ title: '请选择执行的星期', icon: 'none' })
       return
     }
-    const maxParticipants = Number(form.maxParticipants)
+    const maxParticipants = Number(String(form.maxParticipants || '').trim() || 50)
     if (form.allowMultiple && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 50)) {
       wx.showToast({ title: '人数上限填 2–50', icon: 'none' })
       return

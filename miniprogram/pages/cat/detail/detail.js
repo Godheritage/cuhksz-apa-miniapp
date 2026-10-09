@@ -19,6 +19,10 @@ function emptyAdopt() {
   return { candidateId: '', name: '', status: 'contacting', note: '', photos: [] }
 }
 
+function emptyDiet() {
+  return { logId: '', dateKey: '', ate: true, drank: true, note: '', photos: [] }
+}
+
 function uniqueAssetIds(value) {
   return [...new Set((Array.isArray(value) ? value : []).filter(Boolean).map(String))]
 }
@@ -101,7 +105,8 @@ Page({
     plans: [],
     edit: { name: '', notes: '', ageText: '', breed: '', gender: 'unknown', healthStatus: 'unknown', campusStatus: 'on_campus', photos: [] },
     move: { siteId: '', cageId: '', assetIds: [], assetId: '', status: 'in_care', photos: [] },
-    diet: { ate: true, drank: true, note: '', photos: [] },
+    diet: emptyDiet(),
+    savingDiet: false,
     dietLabel: '',
     feedLogs: [],
     canManageAdopt: false,
@@ -217,12 +222,7 @@ Page({
           status: cat.status,
           photos: (data.cage && data.cage.photoFileIds) || (occupancyAssets[0] && occupancyAssets[0].photoFileIds) || [],
         },
-        diet: {
-          ate: true,
-          drank: true,
-          note: '',
-          photos: [],
-        },
+        diet: emptyDiet(),
         planForm: {
           title: '术后特护',
           itemsText: '喂药,换纱布',
@@ -239,7 +239,8 @@ Page({
           edit: draft.edit || this.data.edit,
           move: nextMove,
           assetOptions: markAssetOptions(this.data.assetOptions, draftAssetIds),
-          diet: draft.diet || this.data.diet,
+          diet: draft.diet && (!draft.diet.logId || this.data.feedLogs.some((log) => log._id === draft.diet.logId && log.canEdit))
+            ? draft.diet : this.data.diet,
           hosp: draft.hosp || this.data.hosp,
           planForm: draft.planForm || this.data.planForm,
         })
@@ -412,16 +413,9 @@ Page({
   },
 
   chooseDietPhoto() {
-    wx.chooseMedia({
-      count: 6 - (this.data.diet.photos || []).length,
-      mediaType: ['image'],
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success: (res) => {
-        const paths = (res.tempFiles || []).map((f) => f.tempFilePath)
-        this.setData({ 'diet.photos': (this.data.diet.photos || []).concat(paths).slice(0, 6) })
-      },
-    })
+    photos.pick(this.data.diet.photos, 6)
+      .then((next) => this.setData({ 'diet.photos': next }))
+      .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
   },
 
   removeDietPhoto(e) {
@@ -437,21 +431,24 @@ Page({
   },
 
   saveDiet() {
-    const uploads = (this.data.diet.photos || []).map((path) => api.uploadDutyPhoto(path, 'feed'))
-    Promise.all(uploads)
-      .then((photoFileIds) => api.call('addFeedLog', {
-        catId: this.catId,
-        fed: this.data.diet.ate,
-        watered: this.data.diet.drank,
-        ate: this.data.diet.ate,
-        drank: this.data.diet.drank,
-        note: this.data.diet.note,
+    if (this.data.savingDiet) return
+    const diet = { ...this.data.diet, photos: (this.data.diet.photos || []).slice() }
+    this.setData({ savingDiet: true })
+    photos.uploadMany(diet.photos, 'feed')
+      .then((photoFileIds) => api.call(diet.logId ? 'updateFeedLog' : 'addFeedLog', {
+        ...(diet.logId ? { logId: diet.logId } : { catId: this.catId }),
+        fed: diet.ate,
+        watered: diet.drank,
+        ate: diet.ate,
+        drank: diet.drank,
+        note: diet.note,
         photoFileIds,
-        byName: (this.data.user && this.data.user.displayName) || '',
+        ...(diet.logId ? {} : { byName: (this.data.user && this.data.user.displayName) || '' }),
       }))
       .then(() => {
         this.clearCatDraft()
-        wx.showToast({ title: '已记下这次投喂', icon: 'success' })
+        this.setData({ diet: emptyDiet() })
+        wx.showToast({ title: diet.logId ? '已保存修改' : '已记下这次投喂', icon: 'success' })
         return this.reload({ silent: true })
       })
       .catch((err) => {
@@ -459,9 +456,38 @@ Page({
         const title = /502001|timeout|超时/i.test(raw) ? '保存超时，请再点一次' : raw
         wx.showToast({ title, icon: 'none' })
       })
+      .then(() => this.setData({ savingDiet: false }))
+  },
+
+  editFeed(e) {
+    if (this.data.savingDiet) return
+    const log = this.data.feedLogs.find((row) => row._id === e.currentTarget.dataset.id)
+    if (!log || !log.canEdit) return
+    this.setData({ diet: {
+      logId: log._id, dateKey: log.dateKey || '', ate: !!log.fed, drank: !!log.watered,
+      note: log.note || '', photos: (log.photoFileIds || []).slice(),
+    } }, () => this.scrollToFeedForm())
+  },
+
+  scrollToFeedForm() {
+    const query = wx.createSelectorQuery()
+    query.select('#cat-feed-form').boundingClientRect()
+    query.selectViewport().scrollOffset()
+    query.exec((rects) => {
+      const rect = rects[0]
+      const viewport = rects[1]
+      if (rect && viewport) wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+    })
+  },
+
+  cancelDietEdit() {
+    if (this.data.savingDiet) return
+    this.setData({ diet: emptyDiet() })
+    this.persistDraft()
   },
 
   deleteFeed(e) {
+    if (this.data.savingDiet) return
     const logId = e.currentTarget.dataset.id
     wx.showModal({
       title: '删除投喂记录',
@@ -470,6 +496,7 @@ Page({
         if (!res.confirm) return
         api.call('deleteFeedLog', { logId })
           .then(() => {
+            if (this.data.diet.logId === logId) this.cancelDietEdit()
             wx.showToast({ title: '已删除', icon: 'success' })
             this.reload()
           })

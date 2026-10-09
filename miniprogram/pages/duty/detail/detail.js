@@ -38,6 +38,7 @@ Page({
   },
 
   claimTask() {
+    if (this.data.task.status === 'done' || !this.data.task.canClaim) return
     api.call('claimWorkTask', { taskId: this.taskId })
       .then(() => this.reload())
       .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
@@ -57,10 +58,14 @@ Page({
           ...item,
           statusText: taskStatusText(item.status),
         }))
+        if (task.status === 'done') {
+          task.canClaim = false
+          task.canSubmit = false
+        }
         this.setData({
           ready: true,
           task,
-          statusText: task.allowMultiple ? '多人可做' : taskStatusText(task.status),
+          statusText: taskStatusText(task.status),
           statusClass: taskStatusPill(task.status),
           submittedText: task.report && task.report.submittedAt ? formatTime(task.report.submittedAt) : '',
         })
@@ -86,7 +91,7 @@ Page({
   },
 
   submitTask() {
-    if (this.data.submitting) return
+    if (this.data.submitting || this.data.task.status === 'done' || !this.data.task.canSubmit) return
     this.setData({ submitting: true })
     photos.uploadMany(this.data.report.photos, 'task')
       .then((photoFileIds) => api.call('submitWorkTask', {

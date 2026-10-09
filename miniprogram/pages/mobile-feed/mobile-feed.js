@@ -5,7 +5,7 @@ const { todayKey, formatTime } = require('../../utils/format')
 const photos = require('../../utils/photos')
 
 const WEEK = ['一', '二', '三', '四', '五', '六', '日']
-const emptyForm = () => ({ catName: '', seen: true, fed: false, watered: false, note: '', photos: [] })
+const emptyForm = () => ({ logId: '', catName: '', seen: true, fed: false, watered: false, note: '', photos: [] })
 
 function monthShift(monthKey, amount) {
   const [year, month] = monthKey.split('-').map(Number)
@@ -81,17 +81,21 @@ Page({
   prevMonth() { this.changeMonth(-1) },
   nextMonth() { this.changeMonth(1) },
   changeMonth(amount) {
+    if (this.data.saving) return
     const monthKey = monthShift(this.data.monthKey, amount)
-    this.setData({ monthKey, selectedDate: monthKey + '-01', ready: false })
+    this.setData({ monthKey, selectedDate: monthKey + '-01', ready: false,
+      form: this.data.form.logId ? emptyForm() : this.data.form })
     this.reload()
   },
   pickDay(e) {
+    if (this.data.saving) return
     const selectedDate = e.currentTarget.dataset.date
     if (!selectedDate) return
     const visibleLogs = this.data.catFilter
       ? this.data.logs.filter((row) => row.catName === this.data.catFilter) : this.data.logs
     this.setData({
       selectedDate,
+      form: this.data.form.logId ? emptyForm() : this.data.form,
       days: calendarDays(this.data.monthKey, selectedDate, visibleLogs),
       selectedLogs: visibleLogs.filter((row) => row.dateKey === selectedDate),
     })
@@ -108,6 +112,30 @@ Page({
   },
   onName(e) { this.setData({ 'form.catName': e.detail.value }) },
   onNote(e) { this.setData({ 'form.note': e.detail.value }) },
+  editLog(e) {
+    if (this.data.saving) return
+    const log = this.data.logs.find((row) => row._id === e.currentTarget.dataset.id)
+    if (!log || !log.canEdit) return
+    this.setData({ form: {
+      logId: log._id, catName: log.catName || '', seen: !!log.seen,
+      fed: !!log.fed, watered: !!log.watered, note: log.note || '',
+      photos: (log.photoFileIds || []).slice(),
+    } }, () => this.scrollToFeedForm())
+  },
+  scrollToFeedForm() {
+    const query = wx.createSelectorQuery()
+    query.select('#mobile-feed-form').boundingClientRect()
+    query.selectViewport().scrollOffset()
+    query.exec((rects) => {
+      const rect = rects[0]
+      const viewport = rects[1]
+      if (rect && viewport) wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+    })
+  },
+  cancelEdit() {
+    if (this.data.saving) return
+    this.setData({ form: emptyForm() })
+  },
   choosePhoto() {
     if (this.data.form.photos.length >= 3) {
       wx.showToast({ title: '最多选 3 张照片', icon: 'none' })
@@ -133,21 +161,21 @@ Page({
 
   save() {
     if (this.data.saving) return
-    const form = this.data.form
+    const form = { ...this.data.form, photos: (this.data.form.photos || []).slice() }
+    const dateKey = this.data.selectedDate
     if (!String(form.catName || '').trim()) {
       wx.showToast({ title: '请填写猫名或临时称呼', icon: 'none' })
       return
     }
     this.setData({ saving: true })
-    // 开发者工具把本地临时照片写成 http://usr/...，仍须上传到云存储。
-    Promise.all((form.photos || []).map((filePath) => api.uploadDutyPhoto(filePath, 'mobile-feed')))
-      .then((photoFileIds) => api.call('addMobileFeedLog', {
-        dateKey: this.data.selectedDate,
+    photos.uploadMany(form.photos, 'mobile-feed')
+      .then((photoFileIds) => api.call(form.logId ? 'updateMobileFeedLog' : 'addMobileFeedLog', {
+        ...(form.logId ? { logId: form.logId } : { dateKey }),
         catName: form.catName, seen: form.seen, fed: form.fed,
         watered: form.watered, note: form.note, photoFileIds,
       }))
       .then(() => {
-        wx.showToast({ title: '已记下', icon: 'success' })
+        wx.showToast({ title: form.logId ? '已保存修改' : '已记下', icon: 'success' })
         this.setData({ form: emptyForm(), catFilter: String(form.catName).trim() })
         return this.reload()
       })
@@ -156,10 +184,14 @@ Page({
   },
 
   deleteLog(e) {
+    if (this.data.saving) return
     const logId = e.currentTarget.dataset.id
     wx.showModal({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
       if (!result.confirm) return
-      api.call('deleteMobileFeedLog', { logId }).then(() => this.reload())
+      api.call('deleteMobileFeedLog', { logId }).then(() => {
+        if (this.data.form.logId === logId) this.cancelEdit()
+        return this.reload()
+      })
         .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
     } })
   },

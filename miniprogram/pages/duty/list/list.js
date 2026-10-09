@@ -111,7 +111,7 @@ Page({
           ...group,
           tasks: (group.tasks || []).map((task) => ({
             ...task,
-            statusText: task.allowMultiple ? '多人可做' : taskStatusText(task.status),
+            statusText: taskStatusText(task.status),
             statusClass: taskStatusPill(task.status),
             participantNames: (task.participants || []).map((p) => p.workerName).join('、'),
           })),

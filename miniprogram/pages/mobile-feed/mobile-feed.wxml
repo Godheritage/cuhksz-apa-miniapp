@@ -26,8 +26,12 @@
     <view class="tiny mt12">● 见到过　○ 巡查未见</view>
   </view>
 
-  <view class="card">
-    <view class="card-title">{{selectedDate}} · 记一次</view>
+  <view class="card" id="mobile-feed-form">
+    <view class="row">
+      <view class="card-title">{{selectedDate}} · {{form.logId ? '编辑打卡' : '记一次'}}</view>
+      <view class="chip" wx:if="{{form.logId}}" bindtap="cancelEdit">取消编辑</view>
+    </view>
+    <view class="tiny mt8" wx:if="{{form.logId}}">修改保留原打卡日期和时间。</view>
     <input class="input mt12" placeholder="猫名或临时称呼，新猫直接填" value="{{form.catName}}" bindinput="onName" />
     <view class="row mt12">
       <view>今天见到了</view>
@@ -45,7 +49,7 @@
         <view class="tiny remove-photo" data-index="{{index}}" bindtap="removePhoto">移除</view>
       </view>
     </view>
-    <view class="btn" bindtap="save">{{saving ? '保存中…' : '保存打卡'}}</view>
+    <view class="btn" bindtap="save">{{saving ? '保存中…' : (form.logId ? '保存修改' : '保存打卡')}}</view>
   </view>
 
   <view class="card">
@@ -59,7 +63,10 @@
           <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
           <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
         </view>
-        <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteLog">删除</view>
+        <view class="row-actions">
+          <view class="btn mini plain" wx:if="{{item.canEdit}}" data-id="{{item._id}}" bindtap="editLog">编辑</view>
+          <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteLog">删除</view>
+        </view>
       </view>
       <view class="photo-row mt8" wx:if="{{item.photoUrls.length}}">
         <image class="photo" wx:for="{{item.photoUrls}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoUrls}}" bindtap="previewPhoto" />

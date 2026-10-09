@@ -3,6 +3,7 @@ const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
 const { statusText, statusPill, assetCategoryText, accessStatusText, formatTime } = require('../../../utils/format')
 const photos = require('../../../utils/photos')
+const emptyFeedForm = () => ({ logId: '', dateKey: '', fed: false, watered: false, note: '', photos: [] })
 
 Page({
   onShareAppMessage() {
@@ -26,7 +27,7 @@ Page({
     siteFeedToday: null,
     isRoutineSite: false,
     siteFeedLogs: [],
-    feedForm: { fed: false, watered: false, note: '', photos: [] },
+    feedForm: emptyFeedForm(),
     savingFeed: false,
   },
 
@@ -86,6 +87,29 @@ Page({
   },
   goRoutineDuty() { wx.switchTab({ url: '/pages/routine-duty/routine-duty' }) },
   onFeedNote(e) { this.setData({ 'feedForm.note': e.detail.value }) },
+  editSiteFeed(e) {
+    if (this.data.savingFeed) return
+    const log = this.data.siteFeedLogs.find((row) => row._id === e.currentTarget.dataset.id)
+    if (!log || !log.canEdit) return
+    this.setData({ feedForm: {
+      logId: log._id, dateKey: log.dateKey || '', fed: !!log.fed, watered: !!log.watered,
+      note: log.note || '', photos: (log.photoFileIds || []).slice(),
+    } }, () => this.scrollToFeedForm())
+  },
+  scrollToFeedForm() {
+    const query = wx.createSelectorQuery()
+    query.select('#site-feed-form').boundingClientRect()
+    query.selectViewport().scrollOffset()
+    query.exec((rects) => {
+      const rect = rects[0]
+      const viewport = rects[1]
+      if (rect && viewport) wx.pageScrollTo({ scrollTop: viewport.scrollTop + rect.top, duration: 250 })
+    })
+  },
+  cancelFeedEdit() {
+    if (this.data.savingFeed) return
+    this.setData({ feedForm: emptyFeedForm() })
+  },
   chooseFeedPhoto() {
     photos.pick(this.data.feedForm.photos, 6)
       .then((next) => this.setData({ 'feedForm.photos': next }))
@@ -101,33 +125,38 @@ Page({
   },
   saveSiteFeed() {
     if (this.data.savingFeed) return
-    const form = this.data.feedForm
+    const form = { ...this.data.feedForm, photos: (this.data.feedForm.photos || []).slice() }
     if (!form.fed && !form.watered && !String(form.note || '').trim()) {
       wx.showToast({ title: '勾选投喂、添水或写备注', icon: 'none' })
       return
     }
     this.setData({ savingFeed: true })
     photos.uploadMany(form.photos, 'site-feed')
-      .then((photoFileIds) => api.call('addSiteFeedLog', {
-        siteId: this.siteId, fed: form.fed, watered: form.watered,
+      .then((photoFileIds) => api.call(form.logId ? 'updateSiteFeedLog' : 'addSiteFeedLog', {
+        ...(form.logId ? { logId: form.logId } : { siteId: this.siteId }),
+        fed: form.fed, watered: form.watered,
         note: form.note, photoFileIds,
       }))
       .then(() => {
-        this.setData({ feedForm: { fed: false, watered: false, note: '', photos: [] } })
-        wx.showToast({ title: '已记录', icon: 'success' })
+        this.setData({ feedForm: emptyFeedForm() })
+        wx.showToast({ title: form.logId ? '已保存修改' : '已记录', icon: 'success' })
         return this.reload()
       })
       .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
       .then(() => this.setData({ savingFeed: false }))
   },
   deleteSiteFeed(e) {
+    if (this.data.savingFeed) return
     const logId = e.currentTarget.dataset.id
     wx.showModal({
       title: '删除点位投喂记录', content: '确定删掉这条记录？',
       success: (result) => {
         if (!result.confirm) return
         api.call('deleteSiteFeedLog', { logId })
-          .then(() => this.reload())
+          .then(() => {
+            if (this.data.feedForm.logId === logId) this.cancelFeedEdit()
+            return this.reload()
+          })
           .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
       },
     })

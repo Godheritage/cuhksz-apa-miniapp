@@ -99,6 +99,7 @@ function decorateFeedLogs(state, catId, user) {
       fed: !!(log.fed != null ? log.fed : log.ate),
       watered: !!(log.watered != null ? log.watered : log.drank),
       photoFileIds: log.photoFileIds || [],
+      canEdit: log.byOpenid === user.openid, updatedAt: log.updatedAt || 0,
       canDelete: user.role === 'admin' || log.byOpenid === user.openid,
     }))
 }
@@ -803,6 +804,33 @@ const handlers = {
       lastDiet: cat.lastDiet,
       careTimesToday: logs.filter((item) => item.dateKey === dateKey).length,
     })
+  },
+
+  updateFeedLog(state, event, user) {
+    if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('照片列表不合法')
+    const log = (state.diet_logs || []).find((item) => item._id === event.logId)
+    if (!log) return fail('找不到这条投喂记录', 'NOT_FOUND')
+    if (!user.openid || log.byOpenid !== user.openid) return fail('只能编辑自己写的投喂记录', 'FORBIDDEN')
+    const fed = event.fed == null ? !!(log.fed != null ? log.fed : log.ate) : !!event.fed
+    const watered = event.watered == null ? !!(log.watered != null ? log.watered : log.drank) : !!event.watered
+    if (!fed && !watered) return fail('请至少勾选喂食或喂水')
+    Object.assign(log, {
+      fed, watered, ate: fed, drank: watered,
+      note: event.note == null ? (log.note || '') : String(event.note).trim().slice(0, 80),
+      photoFileIds: event.photoFileIds == null ? (log.photoFileIds || [])
+        : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 6),
+      updatedAt: Date.now(),
+    })
+    const cat = (state.cats || []).find((row) => row._id === log.catId)
+    const logs = decorateFeedLogs(state, log.catId, user)
+    const lastDiet = lastDietFromLogs(logs, dateKeyOf(state))
+    if (cat && cat.lastDiet && cat.lastDiet.at === log.at) {
+      cat.lastDiet = { ...cat.lastDiet, fed, watered, ate: fed, drank: watered, note: log.note }
+      cat.updatedAt = log.updatedAt
+    }
+    return ok({ logId: log._id, catId: log.catId, updatedAt: log.updatedAt, lastDiet,
+      careTimesToday: logs.filter((item) => item.dateKey === dateKeyOf(state)).length })
   },
 
   deleteFeedLog(state, event, user) {

@@ -3,7 +3,7 @@ const { buildOrgExport } = require('../utils/csv')
 const { buildWorkRecords } = require('../utils/workload')
 const { board: ROSTER_BOARD, insuranceLine, creditEvents, storedBoard, boardView } = require('../utils/rosterImport')
 const {
-  parseDeadlineDateKey, parseScope, parseWeekdays, taskCycleKey,
+  parseDeadlineDateKey, parseScope, parseWeekdays, taskCycleKey, participantCycleKey, multiCycleDone, participantLimit,
   normalizeScope, applyScopeView,
 } = require('../utils/taskScope')
 const ROUTINE_SHIFTS = [
@@ -1070,28 +1070,30 @@ function attachOps(handlers, u) {
       const day = todayKey || dateKeyOf({})
       const cycle = taskCycleKey(viewed, day)
       const all = viewed.participants || []
-      const participants = all.filter((p) => (p.cycleKey || p.dateKey) === cycle)
-      const own = all.find((p) => p.openid === user.openid && p.status === 'claimed')
-      const visible = user.role === 'admin'
-        ? all.filter((p) => (p.cycleKey || p.dateKey) === cycle || p.status === 'review')
-        : all.filter((p) => (p.cycleKey || p.dateKey) === cycle || p.openid === user.openid && p.status === 'claimed')
+      const participants = all.filter((p) => participantCycleKey(viewed, p) === cycle)
+      const own = participants.find((p) => p.openid === user.openid && p.status === 'claimed')
+      const reviewable = (p) => p.status === 'review'
+      const visible = user.role === 'admin' ? all.filter((p) => participantCycleKey(viewed, p) === cycle || reviewable(p)) : participants
       return {
         ...viewed,
+        maxParticipants: participantLimit(viewed.maxParticipants),
         photoFileIds: viewed.photoFileIds || [],
         participants: visible.map((p) => ({
           key: p.key, workerName: p.workerName, status: p.status, dateKey: p.dateKey,
-          report: user.role === 'admin' || p.openid === user.openid ? (p.report || null) : null,
+          canReview: !!(user.role === 'admin') && reviewable(p),
+          report: (user.role === 'admin') || p.openid === user.openid ? (p.report || null) : null,
         })),
-        canClaim: isApproved(user) && viewed.dueToday && !own
+        canClaim: isApproved(user) && viewed.status !== 'done' && viewed.dueToday && !own
           && !participants.some((p) => p.openid === user.openid)
-          && participants.length < (viewed.maxParticipants || 2),
-        canRelease: !!(own && own.status === 'claimed'),
-        canSubmit: !!(own && own.status === 'claimed'),
-        canReview: user.role === 'admin' && all.some((p) => p.status === 'review'),
-        canDelete: user.role === 'admin' || !!(viewed.createdBy && viewed.createdBy === user.openid),
+          && participants.length < participantLimit(viewed.maxParticipants),
+        canRelease: !!own,
+        canSubmit: viewed.status !== 'done' && viewed.dueToday && !!own,
+        canReview: !!(user.role === 'admin') && all.some(reviewable),
+        canDelete: (user.role === 'admin') || !!(viewed.createdBy && viewed.createdBy === user.openid),
         report: null,
       }
     }
+
     return {
       ...viewed,
       photoFileIds: viewed.photoFileIds || [],
@@ -1135,8 +1137,11 @@ function attachOps(handlers, u) {
             return t.siteId === site._id
           })
           .sort((a, b) => {
-            const order = (task) => task.status === 'claimed' && task.claimedBy === user.openid
-              ? -1 : ({ open: 0, claimed: 1, review: 2, done: 3 }[task.status] ?? 9)
+            const order = (task) => {
+              const viewed = applyScopeView(task, todayKey)
+              return viewed.status === 'claimed' && viewed.claimedBy === user.openid
+                ? -1 : ({ open: 0, claimed: 1, review: 2, done: 3 }[viewed.status] ?? 9)
+            }
             return order(a) - order(b) || (b.createdAt || 0) - (a.createdAt || 0)
           })
           .map((t) => decorateWorkTask(t, user, todayKey))
@@ -1181,7 +1186,9 @@ function attachOps(handlers, u) {
     const weekdays = parseWeekdays(event.weekdays)
     if (scope === 'weekly' && !weekdays.length) return fail('请选择每周执行的星期')
     const allowMultiple = event.allowMultiple === true
-    const maxParticipants = allowMultiple ? Number(event.maxParticipants) : 1
+    const maxParticipants = allowMultiple
+      ? participantLimit(event.maxParticipants)
+      : 1
     if (allowMultiple && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 50)) {
       return fail('多人任务人数上限请填 2–50')
     }
@@ -1257,8 +1264,12 @@ function attachOps(handlers, u) {
     if (!workerName) return fail('请填写做任务的人的名字')
     if (task.allowMultiple) {
       const participants = task.participants || []
-      const participant = participants.find((p) => p.openid === user.openid && p.status === 'claimed')
+      const cycle = taskCycleKey(task, dateKeyOf(state))
+      if (multiCycleDone(task, cycle)) return fail('这条任务已经完成')
+      if (!live.dueToday) return fail('今天不是这条任务的执行日')
+      const participant = participants.find((p) => p.openid === user.openid && p.status === 'claimed' && participantCycleKey(task, p) === cycle)
       if (!participant) return fail('请先领取今天的任务，或刷新查看最新状态')
+      task.status = 'review'
       participant.status = 'review'
       participant.workerName = workerName
       participant.report = { description, workerName, photoFileIds, submittedBy: user.openid, submittedAt: Date.now() }
@@ -1285,24 +1296,26 @@ function attachOps(handlers, u) {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey)) return fail('月份不合法')
     const tasks = Object.fromEntries((state.work_tasks || []).map((task) => [task._id, task]))
     const completed = new Map()
-    ;(state.work_task_events || []).filter((item) => item.status === 'done').forEach((item) => {
-      const task = tasks[item.taskId]
-      if (!task) return
-      const dateKey = item.dateKey || dateKeyOf(state)
-      if (!dateKey.startsWith(monthKey + '-')) return
-      const key = dateKey + ':' + item.taskId
-      const prior = completed.get(key) || {
-        taskId: item.taskId, dateKey,
-        title: item.title || task.title || '未命名任务',
-        siteName: item.siteName || task.siteName || '不限地点',
-        approvedCount: 0, workerNames: [], at: 0,
-      }
-      prior.approvedCount += 1
-      prior.at = Math.max(prior.at, Number(item.at) || 0)
-      if (item.workerName && !prior.workerNames.includes(item.workerName)) prior.workerNames.push(item.workerName)
-      completed.set(key, prior)
-    })
-    return ok({ items: [...completed.values()].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
+    ;(state.work_task_events || []).filter((item) => item.status === 'done')
+      .sort((a, b) => (a.at || 0) - (b.at || 0)).forEach((item) => {
+        const task = tasks[item.taskId]
+        if (!task) return
+        const dateKey = item.dateKey || todayKey(new Date(item.at))
+        const participant = (task.participants || []).find((p) => p.key === item.participantKey)
+        const cycle = item.cycleKey || (participant ? participantCycleKey(task, participant) : taskCycleKey(task, dateKey))
+        const key = (task.allowMultiple ? cycle : dateKey) + ':' + item.taskId
+        const prior = completed.get(key) || {
+          taskId: item.taskId, dateKey,
+          title: item.title || task.title || '未命名任务',
+          siteName: item.siteName || task.siteName || '不限地点',
+          approvedCount: 0, workerNames: [], at: Number(item.at) || 0,
+        }
+        prior.approvedCount += 1
+        if (item.workerName && !prior.workerNames.includes(item.workerName)) prior.workerNames.push(item.workerName)
+        completed.set(key, prior)
+      })
+    return ok({ items: [...completed.values()].filter((item) => item.dateKey.startsWith(monthKey + '-'))
+      .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
   }
 
   handlers.listRoutineDuty = function listRoutineDuty(state, event, user) {
@@ -1314,7 +1327,7 @@ function attachOps(handlers, u) {
       .filter((row) => row.monthKey === monthKey && row.kind !== 'signup')
       .sort((a, b) => (b.at || 0) - (a.at || 0))
       .map((row) => ({
-        ...row, photoUrls: row.photoFileIds || [], mine: row.byOpenid === user.openid,
+        ...row, photoUrls: row.photoFileIds || [], mine: row.byOpenid === user.openid, canEdit: row.byOpenid === user.openid, updatedAt: row.updatedAt || 0,
         canDelete: user.role === 'admin' || row.byOpenid === user.openid,
       }))
     const checkedIn = new Set(logs.map((row) => [row.dateKey, row.siteId, row.shiftId, row.byOpenid].join('|')))
@@ -1386,6 +1399,23 @@ function attachOps(handlers, u) {
     return ok({ signupId: row._id })
   }
 
+  handlers.updateRoutineDuty = function updateRoutineDuty(state, event, user) {
+    if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('照片列表不合法')
+    const row = (state.routine_duty_checkins || []).find((item) => item._id === event.checkinId && item.kind !== 'signup')
+    if (!row) return fail('执勤打卡不存在', 'NOT_FOUND')
+    if (!user.openid || row.byOpenid !== user.openid) return fail('只能编辑自己的打卡', 'FORBIDDEN')
+    const patch = {
+      fed: event.fed == null ? !!row.fed : !!event.fed,
+      watered: event.watered == null ? !!row.watered : !!event.watered,
+      note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 200),
+      photoFileIds: event.photoFileIds == null ? (row.photoFileIds || []) : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 3),
+      updatedAt: Date.now(),
+    }
+    Object.assign(row, patch)
+    return ok({ checkinId: row._id, updatedAt: patch.updatedAt })
+  }
+
   handlers.deleteRoutineDuty = function deleteRoutineDuty(state, event, user) {
     if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
     const row = (state.routine_duty_checkins || []).find((item) => item._id === event.checkinId)
@@ -1413,7 +1443,7 @@ function attachOps(handlers, u) {
     return ok({
       today: siteFeedSummary(rows, dateKeyOf(state)),
       logs: rows.slice(0, 20).map((row) => ({
-        ...row, canDelete: user.role === 'admin' || row.byOpenid === user.openid,
+        ...row, canEdit: row.byOpenid === user.openid, updatedAt: row.updatedAt || 0, canDelete: user.role === 'admin' || row.byOpenid === user.openid,
       })),
     })
   }
@@ -1437,6 +1467,24 @@ function attachOps(handlers, u) {
     return ok({ logId: row._id })
   }
 
+  handlers.updateSiteFeedLog = function updateSiteFeedLog(state, event, user) {
+    if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('照片列表不合法')
+    const row = (state.site_feed_logs || []).find((item) => item._id === event.logId)
+    if (!row) return fail('点位投喂记录不存在', 'NOT_FOUND')
+    if (!user.openid || row.byOpenid !== user.openid) return fail('只能编辑自己的记录', 'FORBIDDEN')
+    const patch = {
+      fed: event.fed == null ? !!row.fed : !!event.fed,
+      watered: event.watered == null ? !!row.watered : !!event.watered,
+      note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 120),
+      photoFileIds: event.photoFileIds == null ? (row.photoFileIds || []) : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 6),
+      updatedAt: Date.now(),
+    }
+    if (!patch.fed && !patch.watered && !patch.note) return fail('请勾选投喂、添水，或写清现场情况')
+    Object.assign(row, patch)
+    return ok({ logId: row._id, updatedAt: patch.updatedAt })
+  }
+
   handlers.deleteSiteFeedLog = function deleteSiteFeedLog(state, event, user) {
     if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
     const row = (state.site_feed_logs || []).find((item) => item._id === event.logId)
@@ -1455,7 +1503,7 @@ function attachOps(handlers, u) {
     const catNames = [...new Set((state.mobile_feed_logs || []).map((row) => row.catName).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, 'zh-CN'))
     return ok({ catNames, logs: rows.map((row) => ({
-      ...row, photoFileIds: row.photoFileIds || [], photoUrls: row.photoFileIds || [],
+      ...row, photoFileIds: row.photoFileIds || [], photoUrls: row.photoFileIds || [], canEdit: row.byOpenid === user.openid, updatedAt: row.updatedAt || 0,
       canDelete: user.role === 'admin' || row.byOpenid === user.openid,
     })) })
   }
@@ -1477,6 +1525,26 @@ function attachOps(handlers, u) {
     }
     state.mobile_feed_logs.unshift(row)
     return ok({ logId: row._id })
+  }
+
+  handlers.updateMobileFeedLog = function updateMobileFeedLog(state, event, user) {
+    if (!isApproved(user)) return fail('无权限', 'FORBIDDEN')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('照片列表不合法')
+    const row = (state.mobile_feed_logs || []).find((item) => item._id === event.logId)
+    if (!row) return fail('机动投喂记录不存在', 'NOT_FOUND')
+    if (!user.openid || row.byOpenid !== user.openid) return fail('只能编辑自己的记录', 'FORBIDDEN')
+    const patch = {
+      catName: event.catName == null ? (row.catName || '') : String(event.catName).trim().slice(0, 20),
+      seen: event.seen == null ? !!row.seen : !!event.seen,
+      fed: event.fed == null ? !!row.fed : !!event.fed,
+      watered: event.watered == null ? !!row.watered : !!event.watered,
+      note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 160),
+      photoFileIds: event.photoFileIds == null ? (row.photoFileIds || []) : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 3),
+      updatedAt: Date.now(),
+    }
+    if (!patch.catName) return fail('请填写猫名或临时称呼')
+    Object.assign(row, patch)
+    return ok({ logId: row._id, updatedAt: patch.updatedAt })
   }
 
   handlers.deleteMobileFeedLog = function deleteMobileFeedLog(state, event, user) {
@@ -1580,14 +1648,15 @@ function attachOps(handlers, u) {
       const day = dateKeyOf(state)
       const cycle = taskCycleKey(task, day)
       if (!Array.isArray(task.participants)) task.participants = []
-      const thisCycle = task.participants.filter((p) => (p.cycleKey || p.dateKey) === cycle)
-      if (task.participants.some((p) => p.openid === user.openid && p.status === 'claimed')
-        || thisCycle.some((p) => p.openid === user.openid)) return fail('你还有未回传的领取，或今天已经参与过')
-      if (thisCycle.length >= (task.maxParticipants || 2)) return fail('这次任务人数已满')
+      if (multiCycleDone(task, cycle)) return fail('这条任务已经完成')
+      const thisCycle = task.participants.filter((p) => participantCycleKey(task, p) === cycle)
+      if (thisCycle.some((p) => p.openid === user.openid)) return fail('你还有未回传的领取，或今天已经参与过')
+      if (thisCycle.length >= participantLimit(task.maxParticipants)) return fail('这次任务人数已满')
       task.participants.push({
         key: id('claim'), dateKey: day, cycleKey: cycle, openid: user.openid,
         workerName: user.displayName || '成员', status: 'claimed', report: null,
       })
+      task.status = thisCycle.some((p) => p.status === 'review') ? 'review' : 'claimed'
       return ok({ taskId: task._id, status: 'claimed' })
     }
     if (applyScopeView(task, dateKeyOf(state)).status !== 'open') return fail('这条任务已经被领取或完成，请刷新')
@@ -1605,12 +1674,13 @@ function attachOps(handlers, u) {
     const task = (state.work_tasks || []).find((t) => t._id === event.taskId)
     if (!task) return fail('任务不存在', 'NOT_FOUND')
     if (task.allowMultiple) {
+      const cycle = taskCycleKey(task, dateKeyOf(state))
       const before = (task.participants || []).length
       task.participants = (task.participants || []).filter((p) => {
-        return !(p.openid === user.openid && p.status === 'claimed')
+        return !(p.openid === user.openid && p.status === 'claimed' && participantCycleKey(task, p) === cycle)
       })
       if (before === task.participants.length) return fail('今天没有可退回的领取')
-      return ok({ taskId: task._id, status: 'open' })
+      return ok({ taskId: task._id, status: applyScopeView(task, dateKeyOf(state)).status })
     }
     if (task.status !== 'claimed' || task.claimedBy !== user.openid) return fail('任务已改变，请刷新')
     task.status = 'open'
@@ -1629,25 +1699,36 @@ function attachOps(handlers, u) {
       const index = participants.findIndex((p) => p.key === event.participantKey && p.status === 'review')
       if (index < 0) return fail('这条回传已处理，请刷新')
       const participant = participants[index]
-      if (event.approved === false || event.approved === 'false') {
+      const cycle = participantCycleKey(task, participant)
+      const alreadyDone = multiCycleDone(task, cycle)
+      const day = dateKeyOf(state)
+      const approved = !(event.approved === false || event.approved === 'false')
+      if (!approved) {
         participants.splice(index, 1)
-        return ok({ taskId: task._id, status: 'open' })
+        task.status = applyScopeView(task, day).status
+        return ok({ taskId: task._id, status: task.status })
       }
       participant.status = 'done'
+      const completedDateKey = participant.dateKey || day
+      if (!task.lastDoneDateKey || completedDateKey > task.lastDoneDateKey) task.lastDoneDateKey = completedDateKey
+      if (cycle === taskCycleKey(task, day)) task.status = 'done'
       if (!Array.isArray(state.work_task_events)) state.work_task_events = []
       state.work_task_events.push({
         _id: id('workevent'), taskId: task._id, participantKey: participant.key,
-        status: 'done', at: Date.now(), dateKey: dateKeyOf(state),
+        status: 'done', at: Date.now(), dateKey: day, cycleKey: cycle,
         title: task.title || '', siteName: task.siteName || '', workerName: participant.workerName || '',
       })
       if (!Array.isArray(state.work_credit_events)) state.work_credit_events = []
       state.work_credit_events.push({
-        _id: id('credit'), openid: participant.openid,
-        workerName: participant.workerName,
+        _id: id('credit'), openid: participant.openid, workerName: participant.workerName,
         taskId: task._id + ':' + participant.key,
-        title: task.title, dateKey: participant.dateKey || dateKeyOf(state), at: Date.now(),
+        title: task.title, dateKey: completedDateKey, at: Date.now(),
       })
-      return ok({ taskId: task._id, status: 'done' })
+      if (!alreadyDone && task.kind === 'move' && task.donationId) {
+        const donation = (state.donations || []).find((row) => row._id === task.donationId)
+        if (donation) { donation.location = task.toLocation; donation.status = 'on_site' }
+      }
+      return ok({ taskId: task._id, status: applyScopeView(task, day).status })
     }
     if (task.status !== 'review') return fail('现在没有待审回传')
     if (event.approved === false || event.approved === 'false') {

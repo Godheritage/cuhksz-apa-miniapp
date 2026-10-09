@@ -23,7 +23,12 @@
     <view class="card-title">这个点的投喂与添水</view>
     <view class="tiny mt8" wx:if="{{isRoutineSite}}">这个固定点位改在「每日执勤」按早、午、晚、凌晨班打卡。本页只保留旧点位记录。</view>
     <view class="btn mt12" wx:if="{{isRoutineSite}}" bindtap="goRoutineDuty">去每日执勤</view>
-    <block wx:else>
+    <view wx:if="{{!isRoutineSite || feedForm.logId}}" id="site-feed-form">
+    <view class="row mt12" wx:if="{{feedForm.logId}}">
+      <view class="card-title">编辑 {{feedForm.dateKey}} 的打卡</view>
+      <view class="chip" bindtap="cancelFeedEdit">取消编辑</view>
+    </view>
+    <view class="tiny mt8" wx:if="{{feedForm.logId}}">修改保留原打卡日期和时间。</view>
     <view class="tiny mt8">其他点位的日常补粮、添水记在这里；需要单猫追踪时仍去猫档单独记。</view>
     <view class="muted mt12" wx:if="{{siteFeedToday}}">今天已登记 {{siteFeedToday.count}} 次 · {{siteFeedToday.fed ? '已补粮' : '未补粮'}} · {{siteFeedToday.watered ? '已添水' : '未添水'}}</view>
     <view class="muted mt12" wx:else>今天还没有点位投喂记录。</view>
@@ -36,8 +41,8 @@
     <view class="chip-wrap mt8" wx:if="{{feedForm.photos.length}}">
       <image class="photo" wx:for="{{feedForm.photos}}" wx:key="*this" src="{{item}}" mode="aspectFill" data-index="{{index}}" bindlongpress="removeFeedPhoto" />
     </view>
-    <view class="btn" bindtap="saveSiteFeed">{{savingFeed ? '保存中…' : '记下这个点的投喂'}}</view>
-    </block>
+    <view class="btn" bindtap="saveSiteFeed">{{savingFeed ? '保存中…' : (feedForm.logId ? '保存修改' : '记下这个点的投喂')}}</view>
+    </view>
     <view class="list-item" wx:for="{{siteFeedLogs}}" wx:key="_id">
       <view class="row">
         <view>
@@ -45,7 +50,10 @@
           <view class="tiny">{{item.byName}} · {{item.timeText}}</view>
           <view class="tiny" wx:if="{{item.note}}">{{item.note}}</view>
         </view>
-        <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteSiteFeed">删除</view>
+        <view class="row-actions">
+          <view class="btn mini plain" wx:if="{{item.canEdit}}" data-id="{{item._id}}" bindtap="editSiteFeed">编辑</view>
+          <view class="btn mini plain" wx:if="{{item.canDelete}}" data-id="{{item._id}}" bindtap="deleteSiteFeed">删除</view>
+        </view>
       </view>
       <view class="chip-wrap mt8" wx:if="{{item.photoFileIds.length}}">
         <image class="photo" wx:for="{{item.photoFileIds}}" wx:for-item="photo" wx:key="*this" src="{{photo}}" mode="aspectFill" data-url="{{photo}}" data-urls="{{item.photoFileIds}}" bindtap="previewFeed" />

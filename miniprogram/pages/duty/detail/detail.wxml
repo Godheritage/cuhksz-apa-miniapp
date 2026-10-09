@@ -52,7 +52,7 @@
 
   <view class="card" wx:if="{{task.canClaim}}">
     <view class="card-title">领取任务</view>
-    <view class="muted mt8">{{task.allowMultiple ? '可以和其他成员一起做。领取后能看到参与者，完成后单独回传。' : '确定由你来做后点领取。完成后回到这里填写结果。'}}</view>
+    <view class="muted mt8">{{task.allowMultiple ? '可以和其他成员一起做。任意一人回传完成情况并经管理员审核通过，本次任务就算完成。' : '确定由你来做后点领取。完成后回到这里填写结果。'}}</view>
     <view hover-class="btn-hover" class="btn" bindtap="claimTask">{{task.allowMultiple ? '加入这条任务' : '领取这条任务'}}</view>
   </view>
 
@@ -63,8 +63,11 @@
 
   <view class="card" wx:if="{{task.allowMultiple}}">
     <view class="card-title">{{task.scope === 'daily' || task.scope === 'weekly' ? '今天谁在做' : '参与者'}} · {{task.participants.length}}/{{task.maxParticipants}}</view>
+    <view class="muted mt8" wx:if="{{task.status === 'done'}}">本次任务已有回传审核通过，已完成；无需再领取或提交。参与记录和已提交的回传会保留。</view>
+    <view class="tiny mt8" wx:else>任意一人的回传审核通过后，本次任务即完成，无需所有人分别完成。</view>
     <view class="muted mt8" wx:if="{{!task.participants.length}}">还没有人领取。</view>
     <view class="tiny mt8" wx:for="{{task.participants}}" wx:key="key">{{item.workerName}} · {{item.dateKey}} · {{item.statusText}}</view>
+    <view hover-class="btn-hover" class="btn plain" wx:if="{{task.canRelease && !task.canSubmit}}" bindtap="releaseTask">取消我的未提交领取</view>
   </view>
 
   <view class="card" wx:if="{{task.canSubmit}}">
@@ -100,7 +103,8 @@
   </view>
 
   <view class="card" wx:if="{{task.allowMultiple && task.canReview}}">
-    <view class="card-title">逐条审核回传 · 仅管理员可见</view>
+    <view class="card-title">审核回传 · 仅管理员可见</view>
+    <view class="tiny mt8">首条回传审核通过后，本次任务即完成；其他已提交的回传仍会保留。</view>
     <block wx:for="{{task.participants}}" wx:key="key">
       <view class="list-item" wx:if="{{item.status === 'review'}}">
         <view class="card-title">{{item.workerName}}</view>

@@ -44,7 +44,8 @@
       </view>
       <switch checked="{{publish.allowMultiple}}" bindchange="toggleMultiple" color="#3f6f52" />
     </view>
-    <input wx:if="{{publish.allowMultiple}}" class="input mt12" type="number" placeholder="人数上限 2–50" value="{{publish.maxParticipants}}" bindinput="onMaxParticipants" />
+    <input wx:if="{{publish.allowMultiple}}" class="input mt12" type="number" placeholder="人数上限，留空按 50 人" value="{{publish.maxParticipants}}" bindinput="onMaxParticipants" />
+    <view class="tiny mt8" wx:if="{{publish.allowMultiple}}">默认最多 50 人参与，可改为 2–50 人。任意一人的完成回传经管理员审核通过，本次任务就算完成。</view>
   </view>
 
   <view class="card">

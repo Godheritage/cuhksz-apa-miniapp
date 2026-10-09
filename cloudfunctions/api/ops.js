@@ -4,7 +4,7 @@ const { buildOrgExport } = require('./csv')
 const { buildWorkRecords } = require('./workload')
 const { board: ROSTER_BOARD, insuranceLine, creditEvents, storedBoard, boardView } = require('./rosterImport')
 const {
-  parseDeadlineDateKey, parseScope, parseWeekdays, taskCycleKey,
+  parseDeadlineDateKey, parseScope, parseWeekdays, taskCycleKey, participantCycleKey, multiCycleDone, participantLimit,
   normalizeScope, applyScopeView, filterOverlaysForScope,
 } = require('./taskScope')
 const FINANCE_CATS = { 捐款: 1, 买药: 1, 猫粮: 1, 交通: 1, 其他: 1 }
@@ -964,28 +964,30 @@ function attachCloudOps(handlers, ctx) {
       const day = todayKey || shanghaiDateKey()
       const cycle = taskCycleKey(viewed, day)
       const all = viewed.participants || []
-      const participants = all.filter((p) => (p.cycleKey || p.dateKey) === cycle)
-      const own = all.find((p) => p.openid === user.openid && p.status === 'claimed')
-      const visible = isAdmin(user)
-        ? all.filter((p) => (p.cycleKey || p.dateKey) === cycle || p.status === 'review')
-        : all.filter((p) => (p.cycleKey || p.dateKey) === cycle || p.openid === user.openid && p.status === 'claimed')
+      const participants = all.filter((p) => participantCycleKey(viewed, p) === cycle)
+      const own = participants.find((p) => p.openid === user.openid && p.status === 'claimed')
+      const reviewable = (p) => p.status === 'review'
+      const visible = isAdmin(user) ? all.filter((p) => participantCycleKey(viewed, p) === cycle || reviewable(p)) : participants
       return {
         ...viewed,
+        maxParticipants: participantLimit(viewed.maxParticipants),
         photoFileIds: viewed.photoFileIds || [],
         participants: visible.map((p) => ({
           key: p.key, workerName: p.workerName, status: p.status, dateKey: p.dateKey,
-          report: isAdmin(user) || p.openid === user.openid ? (p.report || null) : null,
+          canReview: !!(isAdmin(user)) && reviewable(p),
+          report: (isAdmin(user)) || p.openid === user.openid ? (p.report || null) : null,
         })),
-        canClaim: isApproved(user) && viewed.dueToday && !own
+        canClaim: isApproved(user) && viewed.status !== 'done' && viewed.dueToday && !own
           && !participants.some((p) => p.openid === user.openid)
-          && participants.length < (viewed.maxParticipants || 2),
-        canRelease: !!(own && own.status === 'claimed'),
-        canSubmit: !!(own && own.status === 'claimed'),
-        canReview: isAdmin(user) && all.some((p) => p.status === 'review'),
-        canDelete: isAdmin(user) || !!(viewed.createdBy && viewed.createdBy === user.openid),
+          && participants.length < participantLimit(viewed.maxParticipants),
+        canRelease: !!own,
+        canSubmit: viewed.status !== 'done' && viewed.dueToday && !!own,
+        canReview: !!(isAdmin(user)) && all.some(reviewable),
+        canDelete: (isAdmin(user)) || !!(viewed.createdBy && viewed.createdBy === user.openid),
         report: null,
       }
     }
+
     return {
       ...viewed,
       photoFileIds: viewed.photoFileIds || [],
@@ -1087,8 +1089,11 @@ function attachCloudOps(handlers, ctx) {
             return t.siteId === site._id
           })
           .sort((a, b) => {
-            const order = (task) => task.status === 'claimed' && task.claimedBy === user.openid
-              ? -1 : ({ open: 0, claimed: 1, review: 2, done: 3 }[task.status] ?? 9)
+            const order = (task) => {
+              const viewed = applyScopeView(task, todayKey)
+              return viewed.status === 'claimed' && viewed.claimedBy === user.openid
+                ? -1 : ({ open: 0, claimed: 1, review: 2, done: 3 }[viewed.status] ?? 9)
+            }
             return order(a) - order(b) || (b.createdAt || 0) - (a.createdAt || 0)
           })
           .map((t) => decorateWorkTask(t, user, todayKey)),
@@ -1139,7 +1144,9 @@ function attachCloudOps(handlers, ctx) {
     const weekdays = parseWeekdays(event.weekdays)
     if (scope === 'weekly' && !weekdays.length) return fail('INVALID', '请选择每周执行的星期')
     const allowMultiple = event.allowMultiple === true
-    const maxParticipants = allowMultiple ? Number(event.maxParticipants) : 1
+    const maxParticipants = allowMultiple
+      ? participantLimit(event.maxParticipants)
+      : 1
     if (allowMultiple && (!Number.isInteger(maxParticipants) || maxParticipants < 2 || maxParticipants > 50)) {
       return fail('INVALID', '多人任务人数上限请填 2–50')
     }
@@ -1219,24 +1226,25 @@ function attachCloudOps(handlers, ctx) {
     ])
     const taskById = Object.fromEntries(tasks.map((task) => [task._id, task]))
     const completed = new Map()
-    events.forEach((item) => {
+    events.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).forEach((item) => {
       const task = taskById[item.taskId]
       if (!task) return
       const dateKey = item.dateKey || shanghaiDateKey(new Date(item.at))
-      if (!dateKey.startsWith(monthKey + '-')) return
-      const key = dateKey + ':' + item.taskId
+      const participant = (task.participants || []).find((p) => p.key === item.participantKey)
+      const cycle = item.cycleKey || (participant ? participantCycleKey(task, participant) : taskCycleKey(task, dateKey))
+      const key = (task.allowMultiple ? cycle : dateKey) + ':' + item.taskId
       const prior = completed.get(key) || {
         taskId: item.taskId, dateKey,
         title: item.title || task.title || '未命名任务',
         siteName: item.siteName || task.siteName || '不限地点',
-        approvedCount: 0, workerNames: [], at: 0,
+        approvedCount: 0, workerNames: [], at: Number(item.at) || 0,
       }
       prior.approvedCount += 1
-      prior.at = Math.max(prior.at, Number(item.at) || 0)
       if (item.workerName && !prior.workerNames.includes(item.workerName)) prior.workerNames.push(item.workerName)
       completed.set(key, prior)
     })
-    return ok({ items: [...completed.values()].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
+    return ok({ items: [...completed.values()].filter((item) => item.dateKey.startsWith(monthKey + '-'))
+      .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.at - b.at) })
   }
 
   handlers.listRoutineDuty = async function listRoutineDuty(event, user) {
@@ -1272,10 +1280,11 @@ function attachCloudOps(handlers, ctx) {
       logs: logs.map((row) => ({
         _id: row._id, dateKey: row.dateKey, siteId: row.siteId,
         shiftId: row.shiftId, fed: !!row.fed, watered: !!row.watered,
-        note: row.note || '', byName: row.byName || '', at: row.at,
+        note: row.note || '', byName: row.byName || '', at: row.at, updatedAt: row.updatedAt || 0,
         photoFileIds: row.photoFileIds || [],
         photoUrls: (row.photoFileIds || []).map((id) => urlById[id]).filter(Boolean),
         mine: row.byOpenid === user.openid,
+        canEdit: row.byOpenid === user.openid,
         canDelete: isAdmin(user) || row.byOpenid === user.openid,
       })),
     })
@@ -1311,6 +1320,27 @@ function attachCloudOps(handlers, ctx) {
     })).find((row) => row.kind === 'signup')
     if (ownSignup) await db.collection('routine_duty_checkins').doc(ownSignup._id).remove().catch(() => {})
     return ok({ checkinId: added._id })
+  }
+
+  handlers.updateRoutineDuty = async function updateRoutineDuty(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('INVALID', '照片列表不合法')
+    return db.runTransaction(async (tx) => {
+      const ref = tx.collection('routine_duty_checkins').doc(event.checkinId)
+      const row = (await ref.get()).data
+      if (!row || row.kind === 'signup') return fail('NOT_FOUND', '执勤打卡不存在')
+      if (!user.openid || row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能编辑自己的记录')
+      const patch = {
+        fed: event.fed == null ? !!row.fed : !!event.fed,
+        watered: event.watered == null ? !!row.watered : !!event.watered,
+        note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 200),
+        photoFileIds: event.photoFileIds == null ? (row.photoFileIds || [])
+          : event.photoFileIds.filter((id) => typeof id === 'string' && id && id.startsWith('cloud://')).slice(0, 3),
+        updatedAt: Date.now(),
+      }
+      await ref.update({ data: patch })
+      return ok({ checkinId: row._id, updatedAt: patch.updatedAt })
+    })
   }
 
   handlers.signupRoutineDuty = async function signupRoutineDuty(event, user) {
@@ -1374,16 +1404,18 @@ function attachCloudOps(handlers, ctx) {
       if (task.allowMultiple) {
         const cycle = taskCycleKey(task, todayKey)
         const participants = task.participants || []
-        const thisCycle = participants.filter((p) => (p.cycleKey || p.dateKey) === cycle)
-        if (participants.some((p) => p.openid === user.openid && p.status === 'claimed')
-          || thisCycle.some((p) => p.openid === user.openid)) return fail('INVALID', '你还有未回传的领取，或今天已经参与过')
-        if (thisCycle.length >= (task.maxParticipants || 2)) return fail('INVALID', '这次任务人数已满')
+        if (multiCycleDone(task, cycle)) {
+          return fail('INVALID', '这条任务已经完成')
+        }
+        const thisCycle = participants.filter((p) => participantCycleKey(task, p) === cycle)
+        if (thisCycle.some((p) => p.openid === user.openid)) return fail('INVALID', '你还有未回传的领取，或今天已经参与过')
+        if (thisCycle.length >= participantLimit(task.maxParticipants)) return fail('INVALID', '这次任务人数已满')
         participants.push({
           key: `claim:${Date.now()}:${Math.floor(Math.random() * 1000000)}`,
           dateKey: todayKey, cycleKey: cycle, openid: user.openid,
           workerName: user.displayName || '成员', status: 'claimed', report: null,
         })
-        await ref.update({ data: { participants, workflowV2: true } })
+        await ref.update({ data: { participants, workflowV2: true, status: thisCycle.some((p) => p.status === 'review') ? 'review' : 'claimed' } })
         return ok({ taskId: task._id, status: 'claimed' })
       }
       const current = task.workflowV2 ? task : applyTaskOverlay(task, overlays.reports, overlays.events, todayKey)
@@ -1403,12 +1435,13 @@ function attachCloudOps(handlers, ctx) {
     return taskInTransaction(event.taskId, async (_tx, ref, task) => {
       if (task.allowMultiple) {
         const todayKey = shanghaiDateKey()
+        const cycle = taskCycleKey(task, todayKey)
         const participants = (task.participants || []).filter((p) => {
-          return !(p.openid === user.openid && p.status === 'claimed')
+          return !(p.openid === user.openid && p.status === 'claimed' && participantCycleKey(task, p) === cycle)
         })
         if (participants.length === (task.participants || []).length) return fail('INVALID', '今天没有可退回的领取')
         await ref.update({ data: { participants } })
-        return ok({ taskId: task._id, status: 'open' })
+        return ok({ taskId: task._id, status: applyScopeView({ ...task, participants }, todayKey).status })
       }
       if (task.status !== 'claimed' || task.claimedBy !== user.openid) {
         return fail('INVALID', '任务已改变，请刷新')
@@ -1500,14 +1533,18 @@ function attachCloudOps(handlers, ctx) {
     return taskInTransaction(event.taskId, async (tx, ref, task) => {
       if (task.allowMultiple) {
         const participants = task.participants || []
-        const index = participants.findIndex((p) => p.openid === user.openid && p.status === 'claimed')
+        const todayKey = shanghaiDateKey()
+        const cycle = taskCycleKey(task, todayKey)
+        if (multiCycleDone(task, cycle)) return fail('INVALID', '这条任务已经完成')
+        if (!applyScopeView(task, todayKey).dueToday) return fail('INVALID', '今天不是这条任务的执行日')
+        const index = participants.findIndex((p) => p.openid === user.openid && p.status === 'claimed' && participantCycleKey(task, p) === cycle)
         if (index < 0) return fail('INVALID', '请先领取今天的任务，或刷新查看最新状态')
         const submittedLate = !!(task.deadlineDateKey && shanghaiDateKey() > task.deadlineDateKey)
         const report = { taskId: task._id, participantKey: participants[index].key,
           description, workerName, photoFileIds: photos,
           submittedBy: user.openid, submittedAt: Date.now(), submittedLate }
         participants[index] = { ...participants[index], workerName, status: 'review', report }
-        await ref.update({ data: { participants } })
+        await ref.update({ data: { participants, status: 'review' } })
         await tx.collection('work_task_reports').add({ data: report })
         return ok({ taskId: task._id, status: 'review' })
       }
@@ -1538,13 +1575,23 @@ function attachCloudOps(handlers, ctx) {
         const index = participants.findIndex((p) => p.key === event.participantKey && p.status === 'review')
         if (index < 0) return fail('INVALID', '这条回传已处理，请刷新')
         const participant = participants[index]
+        const cycle = participantCycleKey(task, participant)
+        const alreadyDone = multiCycleDone(task, cycle)
         const report = participant.report || {}
         if (approved) participants[index] = { ...participant, status: 'done' }
         else participants.splice(index, 1)
-        await ref.update({ data: { participants } })
+        const patch = { participants, workflowV2: true }
+        if (approved) {
+          const completedDateKey = participant.dateKey || todayKey
+          if (!task.lastDoneDateKey || completedDateKey > task.lastDoneDateKey) patch.lastDoneDateKey = completedDateKey
+          if (cycle === taskCycleKey(task, todayKey)) patch.status = 'done'
+        } else if (cycle === taskCycleKey(task, todayKey)) {
+          patch.status = applyScopeView({ ...task, participants }, todayKey).status
+        }
+        await ref.update({ data: patch })
         await tx.collection('work_task_events').add({ data: {
           taskId: task._id, participantKey: event.participantKey, status,
-          rejectNote, at: Date.now(), dateKey: todayKey,
+          rejectNote, at: Date.now(), dateKey: todayKey, cycleKey: cycle,
           title: task.title || '', siteName: task.siteName || '', workerName: report.workerName || '',
         } })
         if (approved) {
@@ -1553,8 +1600,11 @@ function attachCloudOps(handlers, ctx) {
             taskId: task._id + ':' + participant.key, title: task.title || '',
             dateKey: participant.dateKey || todayKey, at: Date.now(),
           } })
+          if (!alreadyDone && task.kind === 'move' && task.donationId) {
+            await tx.collection('donations').doc(task.donationId).update({ data: { location: task.toLocation, status: 'on_site' } })
+          }
         }
-        return ok({ taskId: task._id, status })
+        return ok({ taskId: task._id, status: applyScopeView({ ...task, ...patch }, todayKey).status })
       }
       const todayKey = shanghaiDateKey()
       const live = task.workflowV2 ? task : applyTaskOverlay(task, overlays.reports, overlays.events, todayKey)
@@ -1662,6 +1712,7 @@ function attachCloudOps(handlers, ctx) {
         _id: row._id, siteId: row.siteId, dateKey: row.dateKey,
         fed: !!row.fed, watered: !!row.watered, note: row.note || '',
         photoFileIds: row.photoFileIds || [], byName: row.byName || '', at: row.at,
+        canEdit: row.byOpenid === user.openid, updatedAt: row.updatedAt || 0,
         canDelete: isAdmin(user) || row.byOpenid === user.openid,
       })),
     })
@@ -1683,6 +1734,28 @@ function attachCloudOps(handlers, ctx) {
     }
     const added = await addDoc('site_feed_logs', data)
     return ok({ logId: added._id })
+  }
+
+  handlers.updateSiteFeedLog = async function updateSiteFeedLog(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('INVALID', '照片列表不合法')
+    return db.runTransaction(async (tx) => {
+      const ref = tx.collection('site_feed_logs').doc(event.logId)
+      const row = (await ref.get()).data
+      if (!row) return fail('NOT_FOUND', '点位投喂记录不存在')
+      if (!user.openid || row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能编辑自己的记录')
+      const patch = {
+        fed: event.fed == null ? !!row.fed : !!event.fed,
+        watered: event.watered == null ? !!row.watered : !!event.watered,
+        note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 120),
+        photoFileIds: event.photoFileIds == null ? (row.photoFileIds || [])
+          : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 6),
+        updatedAt: Date.now(),
+      }
+      if (!patch.fed && !patch.watered && !patch.note) return fail('INVALID', '请勾选投喂、添水，或写清现场情况')
+      await ref.update({ data: patch })
+      return ok({ logId: row._id, updatedAt: patch.updatedAt })
+    })
   }
 
   handlers.deleteSiteFeedLog = async function deleteSiteFeedLog(event, user) {
@@ -1718,6 +1791,7 @@ function attachCloudOps(handlers, ctx) {
       note: row.note || '', byName: row.byName || '', at: row.at,
       photoFileIds: row.photoFileIds || [],
       photoUrls: (row.photoFileIds || []).map((id) => photoUrlById[id]).filter(Boolean),
+      canEdit: row.byOpenid === user.openid, updatedAt: row.updatedAt || 0,
       canDelete: isAdmin(user) || row.byOpenid === user.openid,
     })) })
   }
@@ -1740,6 +1814,30 @@ function attachCloudOps(handlers, ctx) {
     }
     const added = await addDoc('mobile_feed_logs', data)
     return ok({ logId: added._id })
+  }
+
+  handlers.updateMobileFeedLog = async function updateMobileFeedLog(event, user) {
+    if (!isApproved(user)) return fail('FORBIDDEN', '无权限')
+    if (event.photoFileIds != null && !Array.isArray(event.photoFileIds)) return fail('INVALID', '照片列表不合法')
+    return db.runTransaction(async (tx) => {
+      const ref = tx.collection('mobile_feed_logs').doc(event.logId)
+      const row = (await ref.get()).data
+      if (!row) return fail('NOT_FOUND', '机动投喂记录不存在')
+      if (!user.openid || row.byOpenid !== user.openid) return fail('FORBIDDEN', '只能编辑自己的记录')
+      const patch = {
+        catName: event.catName == null ? (row.catName || '') : String(event.catName).trim().slice(0, 20),
+        seen: event.seen == null ? !!row.seen : !!event.seen,
+        fed: event.fed == null ? !!row.fed : !!event.fed,
+        watered: event.watered == null ? !!row.watered : !!event.watered,
+        note: event.note == null ? (row.note || '') : String(event.note).trim().slice(0, 160),
+        photoFileIds: event.photoFileIds == null ? (row.photoFileIds || [])
+          : event.photoFileIds.filter((id) => typeof id === 'string' && id).slice(0, 3),
+        updatedAt: Date.now(),
+      }
+      if (!patch.catName) return fail('INVALID', '请填写猫名或临时称呼')
+      await ref.update({ data: patch })
+      return ok({ logId: row._id, updatedAt: patch.updatedAt })
+    })
   }
 
   handlers.deleteMobileFeedLog = async function deleteMobileFeedLog(event, user) {
