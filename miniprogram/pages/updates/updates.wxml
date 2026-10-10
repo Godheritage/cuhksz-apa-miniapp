@@ -1,4 +1,5 @@
 <view class="page">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">更新</view>
     <view class="hero-title">最近更新</view>

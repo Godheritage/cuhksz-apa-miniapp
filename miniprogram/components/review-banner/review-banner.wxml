@@ -1,0 +1,8 @@
+<view class="review-banner" wx:if="{{visible}}">
+  <view class="review-title">功能演示 · {{role === 'admin' ? '管理员' : '成员'}}视角</view>
+  <view class="review-note">示例数据 · 操作不会影响真实资料</view>
+  <view class="review-actions">
+    <button class="review-action" size="mini" bindtap="switchRole">切换到{{role === 'admin' ? '成员' : '管理员'}}</button>
+    <button class="review-action review-exit" size="mini" bindtap="exit">退出演示</button>
+  </view>
+</view>

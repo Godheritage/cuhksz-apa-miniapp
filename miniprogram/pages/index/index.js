@@ -1,5 +1,9 @@
 const share = require('../../utils/share.js')
+const reviewSession = require('../../review/session')
 Page({
+  onLoad() {
+    reviewSession.beginEntry()
+  },
   onShareAppMessage() {
     return share.appMessage()
   },
@@ -26,7 +30,7 @@ Page({
     this.setData({ slow: false, error: '' })
     clearTimeout(this.slowTimer)
     this.slowTimer = setTimeout(() => this.setData({ slow: true }), 2500)
-    app.getUser().then((user) => {
+    app.getUser(true).then((user) => {
       clearTimeout(this.slowTimer)
       this.go(user)
     }).catch(() => {

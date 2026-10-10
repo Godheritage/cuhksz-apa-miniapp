@@ -1,8 +1,11 @@
+const reviewSession = require('../review/session')
+
 function writeLocal(filename, text) {
   if (!wx.env || !wx.env.USER_DATA_PATH || !wx.getFileSystemManager) {
     throw new Error('当前环境不能写本地文件')
   }
-  const path = `${wx.env.USER_DATA_PATH}/${filename}`
+  const localName = reviewSession.isReviewMode() ? `review-demo-${filename}` : filename
+  const path = `${wx.env.USER_DATA_PATH}/${localName}`
   wx.getFileSystemManager().writeFileSync(path, `\uFEFF${text}`, 'utf8')
   return path
 }

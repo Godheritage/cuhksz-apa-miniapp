@@ -1,4 +1,5 @@
 <view class="page">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">仅管理员可见</view>
     <view class="hero-title">工作记录与 PF</view>

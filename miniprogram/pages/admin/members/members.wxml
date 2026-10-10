@@ -1,4 +1,5 @@
 <view class="page">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">成员</view>
     <view class="hero-title">成员审核</view>

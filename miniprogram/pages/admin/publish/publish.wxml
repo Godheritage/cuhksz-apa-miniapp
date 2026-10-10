@@ -1,4 +1,5 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">已审核成员可发布</view>
     <view class="hero-title">发布任务</view>
@@ -69,4 +70,5 @@
 
   <view class="btn" bindtap="publishTask">{{submitting ? '提交中…' : (completion.description ? '发布并提交完成情况' : '发布任务')}}</view>
 </view>
-<view class="page" wx:else><view class="card">正在加载发布页面…</view></view>
+<view class="page" wx:else>
+  <review-banner /><view class="card">正在加载发布页面…</view></view>

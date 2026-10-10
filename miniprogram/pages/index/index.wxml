@@ -1,5 +1,6 @@
 <view class="guard">
   <view class="card splash">
+    <review-banner />
     <view class="hero-kicker">动保</view>
     <view class="hero-title">校园动保执勤</view>
     <view class="hero-sub">正在确认你的身份…</view>

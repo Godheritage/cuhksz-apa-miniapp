@@ -1,3 +1,4 @@
+const confirm = require('../../../utils/confirm')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const { todayKey } = require('../../../utils/format')
@@ -78,7 +79,7 @@ Page({
   importCsv() {
     api.call('adminImportFinanceCsv', { csv: this.data.csvText })
       .then((data) => {
-        wx.showModal({
+        confirm({
           title: '导入完成',
           content: `成功 ${data.imported || 0} 行。${(data.errors || []).join('；')}`,
           showCancel: false,

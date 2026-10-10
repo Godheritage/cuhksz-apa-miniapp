@@ -1,4 +1,5 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">使用指南</view>
     <view class="hero-title">{{title}}</view>
@@ -12,6 +13,7 @@
 
 </view>
 <view class="page" wx:else>
+  <review-banner />
   <view class="card">
     <view class="card-title">{{error || '正在确认身份…'}}</view>
     <view class="btn mt12" wx:if="{{error}}" bindtap="reload">重试</view>

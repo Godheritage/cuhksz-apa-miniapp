@@ -1,4 +1,5 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">仅管理员可见</view>
     <view class="hero-title">管理</view>
@@ -64,6 +65,7 @@
   </view>
 </view>
 <view class="page" wx:else>
+  <review-banner />
   <view class="card">
     <view class="card-title">{{error || '正在确认管理员身份…'}}</view>
     <view class="btn mt12" wx:if="{{error}}" bindtap="reloadRole">重试</view>

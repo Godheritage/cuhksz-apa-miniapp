@@ -1,4 +1,5 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">猫档</view>
     <view class="hero-title">校园猫档</view>

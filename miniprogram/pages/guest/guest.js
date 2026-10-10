@@ -9,7 +9,7 @@ const COPY = {
   },
   pending: {
     title: '已提交，等待审核',
-    desc: '管理员会在成员审核里处理。等待期间也可查看下方的自愿捐款入口。',
+    desc: '管理员会在成员审核里处理，通过后会自动进入。下方功能演示可直接体验示例数据。',
   },
   rejected: {
     title: '申请未通过',
@@ -110,5 +110,5 @@ Page({
       })
       .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
   },
-  goDonatePay() { wx.navigateTo({ url: '/pages/donate/pay/pay' }) },
+  goReview() { wx.navigateTo({ url: '/pages/review/review' }) },
 })

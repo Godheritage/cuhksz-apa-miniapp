@@ -2,6 +2,7 @@
   "pages": [
     "pages/index/index",
     "pages/guest/guest",
+    "pages/review/review",
     "pages/duty/list/list",
     "pages/duty/detail/detail",
     "pages/duty/progress/progress",
@@ -10,7 +11,6 @@
     "pages/cat/list/list",
     "pages/cat/detail/detail",
     "pages/donate/donate",
-    "pages/donate/pay/pay",
     "pages/szcat/szcat",
     "pages/updates/updates",
     "pages/roster/roster",
@@ -61,5 +61,8 @@
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "usingComponents": {
+    "review-banner": "/components/review-banner/review-banner"
+  }
 }

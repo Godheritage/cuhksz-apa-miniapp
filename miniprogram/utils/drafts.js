@@ -1,29 +1,23 @@
+const session = require('../review/session')
+
+function createDraftKey(key) {
+  const context = session.snapshot()
+  return { key: session.storageKey(key, context), context }
+}
+function draftKey(value) { return typeof value === 'string' ? createDraftKey(value) : value }
 function readDraft(key) {
-  try {
-    return wx.getStorageSync(key) || null
-  } catch (e) {
-    return null
-  }
+  const target = draftKey(key)
+  if (!target || !session.isCurrent(target.context)) return null
+  try { return wx.getStorageSync(target.key) || null } catch (e) { return null }
 }
-
 function writeDraft(key, value) {
-  try {
-    wx.setStorageSync(key, value)
-  } catch (e) {
-    // 存储满时宁可丢掉草稿，也不能把已保存业务数据冲掉
-  }
+  const target = draftKey(key)
+  if (!target || !session.isCurrent(target.context)) return
+  try { wx.setStorageSync(target.key, value) } catch (e) {}
 }
-
 function clearDraft(key) {
-  try {
-    wx.removeStorageSync(key)
-  } catch (e) {
-    // ignore
-  }
+  const target = draftKey(key)
+  if (!target || !session.isCurrent(target.context)) return
+  try { wx.removeStorageSync(target.key) } catch (e) {}
 }
-
-module.exports = {
-  readDraft,
-  writeDraft,
-  clearDraft,
-}
+module.exports = { readDraft, writeDraft, clearDraft, createDraftKey }

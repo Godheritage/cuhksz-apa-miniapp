@@ -1,4 +1,5 @@
 <view class="page">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">财务</view>
     <view class="hero-title">财务台账</view>

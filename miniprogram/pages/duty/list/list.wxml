@@ -1,4 +1,5 @@
 <view class="page has-tab" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">任务</view>
     <view class="hero-title">任务列表</view>
@@ -95,6 +96,7 @@
   </view>
 </view>
 <view class="page" wx:else>
+  <review-banner />
   <view class="card">
     <view class="card-title">{{loginSlow ? '任务暂时没加载出来' : '正在加载任务…'}}</view>
     <view class="btn mt12" wx:if="{{loginSlow}}" bindtap="retryLogin">重试</view>

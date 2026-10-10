@@ -1,8 +1,9 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">物资</view>
     <view class="hero-title">物资捐助登记</view>
-    <view class="hero-sub">这里登记实体或电子物资；微信捐款的收款码在「我的 → 自愿支持猫咪」。实体物资可登记后发布搬运任务。</view>
+    <view class="hero-sub">这里登记实体或电子物资。实体物资可登记后发布搬运任务。</view>
   </view>
 
   <view class="card" wx:if="{{isAdmin && orgBalance}}">

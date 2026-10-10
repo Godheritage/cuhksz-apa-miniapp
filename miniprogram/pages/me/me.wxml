@@ -1,4 +1,5 @@
 <view class="page has-tab">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">我的</view>
     <view class="hero-title">{{user.displayName || '正在确认身份'}}</view>
@@ -16,11 +17,10 @@
       <view class="muted mt8">不熟悉操作时，点这里看简短说明。</view>
     </view>
 
-    <view class="card donate-shortcut" bindtap="goDonatePay">
-      <view class="row">
-        <view><view class="card-title">自愿支持猫咪</view><view class="tiny">微信捐款 · 查看收款码</view></view>
-        <view class="pill">查看</view>
-      </view>
+    <view class="card" bindtap="goReview">
+      <view class="card-title">功能演示（示例数据）</view>
+      <view class="tiny mt8">用示例数据体验成员与管理员功能，不影响真实资料。</view>
+      <view class="btn ghost">进入演示</view>
     </view>
 
     <view class="card">

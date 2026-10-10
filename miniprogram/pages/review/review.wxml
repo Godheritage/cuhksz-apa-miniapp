@@ -1,0 +1,32 @@
+<view class="page">
+  <review-banner />
+  <view class="hero">
+    <view class="hero-kicker">功能演示</view>
+    <view class="hero-title">用示例数据试一试</view>
+    <view class="hero-sub">成员和管理员使用与正式功能相同的页面。这里的操作只改变演示记录，不会影响协会的真实资料。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">演示账号登录</view>
+    <view class="tiny">无需申请协会身份。请使用提供的演示账号和密码。</view>
+    <view class="field">
+      <view class="field-label">演示账号</view>
+      <input class="input" value="{{account}}" bindinput="onAccount" maxlength="60" placeholder="演示账号" placeholder-class="ph" />
+    </view>
+    <view class="field">
+      <view class="field-label">演示密码</view>
+      <input class="input" password="{{true}}" value="{{password}}" bindinput="onPassword" bindconfirm="enter" maxlength="80" placeholder="演示密码" placeholder-class="ph" />
+    </view>
+    <view class="field">
+      <view class="field-label">体验身份</view>
+      <view class="chip-wrap">
+        <view class="chip {{role === 'member' ? 'on' : ''}}" bindtap="chooseRole" data-role="member">成员视角</view>
+        <view class="chip {{role === 'admin' ? 'on' : ''}}" bindtap="chooseRole" data-role="admin">管理员视角</view>
+      </view>
+      <view class="tiny mt12">进入后可随时切换身份，体验打卡、任务、猫档、点位与管理功能。</view>
+    </view>
+    <view class="review-error mt12" wx:if="{{error}}">{{error}}</view>
+    <view class="btn" hover-class="btn-hover" bindtap="enter">{{entering ? '正在进入…' : '开始演示'}}</view>
+    <view class="tiny mt12">演示中会持续标明“示例数据”。点击“退出演示”可回到你自己的身份。</view>
+  </view>
+</view>

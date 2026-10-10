@@ -455,8 +455,8 @@ const handlers = {
     return ok({ user: publicUser(user) })
   },
 
-  resetMock(state) {
-    const next = store.reset()
+  resetMock(state, _event, _user, storage = store) {
+    const next = storage.reset()
     Object.keys(state).forEach((k) => delete state[k])
     Object.assign(state, next)
     return ok({ user: publicUser(currentUser(state)) })
@@ -1167,17 +1167,40 @@ const handlers = {
 
 attachOps(handlers, { ok, fail, id, isApproved, writeLog, todayKey, ensureOnDuty, routineDutyEnabled })
 
-function call(action, data = {}) {
-  const state = store.load()
-  const user = currentUser(state)
-  const handler = handlers[action]
-  if (!handler) return fail('未知操作', 'UNKNOWN_ACTION')
-  return Promise.resolve()
-    .then(() => handler(state, data, user))
-    .then((res) => {
-      store.save(state)
-      return res
-    })
+function createClient(storage, options = {}) {
+  let queue = Promise.resolve()
+  function call(action, data = {}, guard = () => {}) {
+    function dispatch() {
+      guard()
+      if (options.review && ['seed', 'resetMock', 'switchMockRole', 'advanceMockDay'].includes(action)) {
+        return fail('功能体验中不提供此操作，请使用体验身份切换入口', 'REVIEW_ONLY')
+      }
+      const state = storage.load()
+      const user = currentUser(state)
+      const handler = handlers[action]
+      if (!handler) return fail('未知操作', 'UNKNOWN_ACTION')
+      return Promise.resolve()
+        .then(() => {
+          guard()
+          if (options.review && (action === 'login' || action === 'getProfile')) {
+            return { user: { ...publicUser(user), reviewMode: true } }
+          }
+          return handler(state, data, user, storage)
+        })
+        .then((res) => {
+          guard()
+          storage.save(state)
+          if (options.review && res && res.user) res.user.reviewMode = true
+          return res
+        })
+    }
+    if (!options.review) return dispatch()
+    const result = queue.then(dispatch)
+    queue = result.catch(() => {})
+    return result
+  }
+  return { call }
 }
 
-module.exports = { call }
+const client = createClient(store)
+module.exports = { call: client.call, createClient }

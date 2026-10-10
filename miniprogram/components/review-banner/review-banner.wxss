@@ -1,0 +1,22 @@
+.review-banner {
+  background: #fff1d8;
+  color: #73511e;
+  border: 2rpx solid #e7c994;
+  border-radius: 18rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+.review-title { font-size: 28rpx; line-height: 1.6; font-weight: 600; }
+.review-note { font-size: 24rpx; line-height: 1.7; margin-top: 4rpx; }
+.review-actions { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 16rpx; }
+button.review-action {
+  margin: 0;
+  padding: 8rpx 16rpx;
+  background: #fffdf8;
+  color: #73511e;
+  font-size: 24rpx;
+  line-height: 1.7;
+  border-radius: 12rpx;
+}
+button.review-action::after { border: 1rpx solid #e7c994; }
+button.review-exit { background: transparent; }

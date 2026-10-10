@@ -1,4 +1,5 @@
 <view class="page" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">绝育</view>
     <view class="hero-title">本月绝育指标</view>

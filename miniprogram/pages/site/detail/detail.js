@@ -1,3 +1,5 @@
+const confirm = require('../../../utils/confirm')
+const reviewSession = require('../../../review/session')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
@@ -77,7 +79,7 @@ Page({
   },
 
   goTasks() {
-    try { wx.setStorageSync('apa_focus_site', this.siteId) } catch (e) {}
+    try { wx.setStorageSync(reviewSession.storageKey('apa_focus_site'), this.siteId) } catch (e) {}
     wx.switchTab({ url: '/pages/duty/list/list' })
   },
   openCat(e) { wx.navigateTo({ url: `/pages/cat/detail/detail?id=${e.currentTarget.dataset.id}` }) },
@@ -148,7 +150,7 @@ Page({
   deleteSiteFeed(e) {
     if (this.data.savingFeed) return
     const logId = e.currentTarget.dataset.id
-    wx.showModal({
+    confirm({
       title: '删除点位投喂记录', content: '确定删掉这条记录？',
       success: (result) => {
         if (!result.confirm) return

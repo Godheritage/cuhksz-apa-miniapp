@@ -1,3 +1,4 @@
+const confirm = require('../../utils/confirm')
 const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
@@ -237,7 +238,7 @@ Page({
   deleteCheckin(e) {
     if (this.data.saving) return
     const checkinId = e.currentTarget.dataset.id
-    wx.showModal({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
+    confirm({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
       if (!result.confirm) return
       api.call('deleteRoutineDuty', { checkinId }).then(() => {
         if (this.data.selectedSlot.checkinId === checkinId) this.closeForm()

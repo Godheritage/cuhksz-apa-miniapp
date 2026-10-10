@@ -1,3 +1,4 @@
+const reviewSession = require('../../../review/session')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
@@ -72,10 +73,10 @@ Page({
       clearTimeout(this.slowTimer)
       let siteId = this.data.siteId
       try {
-        const focus = wx.getStorageSync('apa_focus_site')
+        const focus = wx.getStorageSync(reviewSession.storageKey('apa_focus_site'))
         if (focus) {
           siteId = focus
-          wx.removeStorageSync('apa_focus_site')
+          wx.removeStorageSync(reviewSession.storageKey('apa_focus_site'))
         }
       } catch (e) {}
       this.setData({ siteId })

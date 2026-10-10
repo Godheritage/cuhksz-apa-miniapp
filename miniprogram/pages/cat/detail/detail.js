@@ -1,8 +1,9 @@
 const share = require('../../../utils/share.js')
 const photos = require('../../../utils/photos')
 const api = require('../../../services/api')
+const confirm = require('../../../utils/confirm')
 const auth = require('../../../behaviors/auth')
-const { readDraft, writeDraft, clearDraft } = require('../../../utils/drafts')
+const { readDraft, writeDraft, clearDraft, createDraftKey } = require('../../../utils/drafts')
 const {
   formatTime, statusText, statusPill, campusText, campusPill,
   genderText, healthText, dietText, siteDietText, todayKey, adoptStatusText,
@@ -121,7 +122,7 @@ Page({
 
   onLoad(query) {
     this.catId = query.id
-    this.draftKey = `apa_draft_cat_${query.id}`
+    this.draftKey = createDraftKey(`apa_draft_cat_${query.id}`)
     this.bindApprovedUser(() => this.reload())
   },
 
@@ -302,7 +303,7 @@ Page({
     })
   },
   deleteCandidate(e) {
-    wx.showModal({
+    confirm({
       title: '删除候选领养人',
       content: '确定删掉这条？',
       success: (res) => {
@@ -489,7 +490,7 @@ Page({
   deleteFeed(e) {
     if (this.data.savingDiet) return
     const logId = e.currentTarget.dataset.id
-    wx.showModal({
+    confirm({
       title: '删除投喂记录',
       content: '删掉后次数会重算。确定删除？',
       success: (res) => {

@@ -1,3 +1,4 @@
+const confirm = require('../../../utils/confirm')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 
@@ -77,7 +78,7 @@ Page({
 
   deleteNote() {
     if (!this.data.noteId) return
-    wx.showModal({
+    confirm({
       title: '删除资料', content: '删除后无法恢复，确定吗？',
       success: (result) => {
         if (!result.confirm) return

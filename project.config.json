@@ -8,7 +8,16 @@
   "description": "港中深校园动保 · 日常执勤记录",
   "libVersion": "3.8.0",
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "file",
+        "value": "assets/donate/wechat-pay.jpg"
+      },
+      {
+        "type": "folder",
+        "value": "pages/donate/pay"
+      }
+    ],
     "include": []
   },
   "setting": {

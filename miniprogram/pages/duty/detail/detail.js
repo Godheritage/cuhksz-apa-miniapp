@@ -1,3 +1,4 @@
+const confirm = require('../../../utils/confirm')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const auth = require('../../../behaviors/auth')
@@ -132,7 +133,7 @@ Page({
   },
 
   deleteTask() {
-    wx.showModal({
+    confirm({
       title: '删除任务',
       content: '删除后不能恢复。确定删掉这条任务？',
       success: (res) => {

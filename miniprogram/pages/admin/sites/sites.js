@@ -1,3 +1,4 @@
+const confirm = require('../../../utils/confirm')
 const share = require('../../../utils/share.js')
 const api = require('../../../services/api')
 const { assetCategoryText } = require('../../../utils/format')
@@ -117,7 +118,7 @@ Page({
   deleteSite(e) {
     const site = this.data.sites.find((s) => s._id === e.currentTarget.dataset.id)
     if (!site) return
-    wx.showModal({
+    confirm({
       title: '删除执勤点',
       content: `将同时删除「${site.name}」的笼子和固定资产。若还有猫挂在该点会失败，请先转移。确定删除？`,
       success: (res) => {
@@ -163,7 +164,7 @@ Page({
   },
 
   deleteCage(e) {
-    wx.showModal({
+    confirm({
       title: '删除笼子',
       content: '有猫占用时无法删除。',
       success: (res) => {
@@ -238,7 +239,7 @@ Page({
   },
 
   deleteAsset(e) {
-    wx.showModal({
+    confirm({
       title: '删除固定资产',
       content: '有猫占用时无法删除。',
       success: (res) => {

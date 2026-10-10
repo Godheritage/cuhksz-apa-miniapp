@@ -1,4 +1,5 @@
 <view class="page has-tab" wx:if="{{ready}}">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">每日执勤</view>
     <view class="hero-title">日常执勤点位</view>
@@ -104,4 +105,5 @@
     <view class="btn" bindtap="save">{{saving ? '保存中…' : (selectedSlot.checkinId ? '保存修改' : '确认打卡')}}</view>
   </view>
 </view>
-<view class="page has-tab" wx:else><view class="card">正在加载每日执勤…</view></view>
+<view class="page has-tab" wx:else>
+  <review-banner /><view class="card">正在加载每日执勤…</view></view>

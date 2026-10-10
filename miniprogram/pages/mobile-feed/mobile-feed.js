@@ -1,3 +1,4 @@
+const confirm = require('../../utils/confirm')
 const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
@@ -186,7 +187,7 @@ Page({
   deleteLog(e) {
     if (this.data.saving) return
     const logId = e.currentTarget.dataset.id
-    wx.showModal({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
+    confirm({ title: '删除打卡', content: '确定删掉这条记录？', success: (result) => {
       if (!result.confirm) return
       api.call('deleteMobileFeedLog', { logId }).then(() => {
         if (this.data.form.logId === logId) this.cancelEdit()

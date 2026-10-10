@@ -1,6 +1,8 @@
 const api = require('../services/api')
+const session = require('../review/session')
 
 function pick(current, max) {
+  const context = session.snapshot()
   const have = current || []
   return new Promise((resolve, reject) => {
     wx.chooseMedia({
@@ -9,10 +11,12 @@ function pick(current, max) {
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
+        if (!session.isCurrent(context)) return reject(session.changedError())
         const paths = (res.tempFiles || []).map((f) => f.tempFilePath)
         resolve(have.concat(paths).slice(0, max))
       },
       fail: (err) => {
+        if (!session.isCurrent(context)) return reject(session.changedError())
         if (err && /cancel/i.test(err.errMsg || '')) resolve(have)
         else reject(err)
       },
@@ -27,12 +31,16 @@ function removeAt(list, index) {
 }
 
 function uploadMany(paths, folder) {
+  const context = session.snapshot()
   return Promise.all((paths || []).map((path) => {
     if (!path) return Promise.resolve('')
     const localPreview = /^https?:\/\/(?:usr|tmp)(?:\/|:)/i.test(path)
     if (/^cloud:\/\//.test(path) || (/^https?:\/\//.test(path) && !localPreview)) return Promise.resolve(path)
     return api.uploadDutyPhoto(path, folder)
-  })).then((ids) => ids.filter(Boolean))
+  })).then((ids) => {
+    session.assertCurrent(context)
+    return ids.filter(Boolean)
+  })
 }
 
 function failText(err) {

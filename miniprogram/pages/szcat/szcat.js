@@ -1,3 +1,4 @@
+const confirm = require('../../utils/confirm')
 const share = require('../../utils/share.js')
 const api = require('../../services/api')
 const auth = require('../../behaviors/auth')
@@ -109,7 +110,7 @@ Page({
       .catch((err) => wx.showToast({ title: photos.failText(err), icon: 'none' }))
   },
   deleteCopy(e) {
-    wx.showModal({
+    confirm({
       title: '删除文案',
       content: '确定删掉这条要填写的文案？',
       success: (res) => {
@@ -126,7 +127,7 @@ Page({
   openOfficial() {
     const url = this.data.officialUrl || 'https://www.szcat.org/'
     wx.setClipboardData({ data: url })
-    wx.showModal({
+    confirm({
       title: '官网链接已复制',
       content: '请在系统浏览器打开深圳猫网。指标提交只在官方网站或公众号「深圳猫网」完成。',
       showCancel: false,

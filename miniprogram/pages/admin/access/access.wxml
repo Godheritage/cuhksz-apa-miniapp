@@ -1,4 +1,5 @@
 <view class="page">
+  <review-banner />
   <view class="hero">
     <view class="hero-kicker">审批</view>
     <view class="hero-title">地址查看申请</view>
