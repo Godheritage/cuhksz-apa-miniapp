@@ -17,11 +17,6 @@
       <view class="muted mt8">不熟悉操作时，点这里看简短说明。</view>
     </view>
 
-    <view class="card" bindtap="goReview">
-      <view class="card-title">功能演示（示例数据）</view>
-      <view class="tiny mt8">用示例数据体验成员与管理员功能，不影响真实资料。</view>
-      <view class="btn ghost">进入演示</view>
-    </view>
 
     <view class="card">
       <view class="row" bindtap="toggleMore">

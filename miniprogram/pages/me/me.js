@@ -64,7 +64,6 @@ Page({
   goAdmin() { wx.navigateTo({ url: '/pages/admin/home/home' }) },
   goSites() { wx.navigateTo({ url: '/pages/site/list/list' }) },
   goDonate() { wx.navigateTo({ url: '/pages/donate/donate' }) },
-  goReview() { wx.navigateTo({ url: '/pages/review/review' }) },
   goSzcat() { wx.navigateTo({ url: '/pages/szcat/szcat' }) },
   goCats() { wx.navigateTo({ url: '/pages/cat/list/list' }) },
   goUpdates() { wx.navigateTo({ url: '/pages/updates/updates' }) },

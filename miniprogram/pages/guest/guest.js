@@ -9,7 +9,7 @@ const COPY = {
   },
   pending: {
     title: '已提交，等待审核',
-    desc: '管理员会在成员审核里处理，通过后会自动进入。下方功能演示可直接体验示例数据。',
+    desc: '管理员会在成员审核里处理，通过后会自动进入。',
   },
   rejected: {
     title: '申请未通过',
@@ -100,6 +100,10 @@ Page({
     this.setData({ 'form.applyNote': e.detail.value })
   },
 
+  openReviewLogin() {
+    wx.navigateTo({ url: '/pages/review/review' })
+  },
+
   submitApply() {
     api.call('applyJoin', this.data.form)
       .then((data) => {
@@ -110,5 +114,4 @@ Page({
       })
       .catch((err) => wx.showToast({ title: err.message, icon: 'none' }))
   },
-  goReview() { wx.navigateTo({ url: '/pages/review/review' }) },
 })

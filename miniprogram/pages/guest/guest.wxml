@@ -1,7 +1,7 @@
 <view class="page">
   <review-banner />
   <view class="hero">
-    <view class="hero-kicker">身份</view>
+    <view class="hero-kicker" bindlongpress="openReviewLogin">身份</view>
     <view class="hero-title">{{title}}</view>
     <view class="hero-sub">{{desc}}</view>
   </view>
@@ -32,9 +32,4 @@
     <view class="tiny mt12">每个微信号只能申请一次，不能再改、也不能再提交。</view>
   </view>
 
-  <view class="card" bindtap="goReview">
-    <view class="card-title">功能演示（示例数据）</view>
-    <view class="tiny mt8">无需申请身份，可体验成员与管理员功能。演示操作不会影响真实资料。</view>
-    <view class="btn ghost">进入演示</view>
-  </view>
 </view>

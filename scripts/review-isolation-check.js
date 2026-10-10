@@ -383,6 +383,10 @@ function checkReleasePackage() {
   assert(fs.existsSync(path.join(mini, 'assets/donate/wechat-pay.jpg')), 'Original local QR file must be preserved')
   assert(fs.existsSync(path.join(mini, 'pages/donate/pay/pay.js')), 'Original local payment source must be preserved')
   assert(manifest.pages.includes('pages/review/review'), 'Review login must be reachable in the actual release')
+  const guestMarkup = fs.readFileSync(path.join(mini, 'pages/guest/guest.wxml'), 'utf8')
+  const meMarkup = fs.readFileSync(path.join(mini, 'pages/me/me.wxml'), 'utf8')
+  assert(/<view[^>]*bindlongpress="openReviewLogin"[^>]*>身份<\/view>/.test(guestMarkup), 'Review entry must require a deliberate long press')
+  assert(!/bindtap="(?:goReview|openReviewLogin)"|进入演示|功能演示（示例数据）/.test(guestMarkup + meMarkup), 'New applicants and members must not see or tap a public demo entry')
   console.log('REVIEW_RELEASE_PACKAGE_OK')
 }
 
